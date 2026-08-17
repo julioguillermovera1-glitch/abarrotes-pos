@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Central — Todos los locales</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🏬 Panel Central</div>
+    <div class="navbar-links"></div>
+    <div class="navbar-user">
+      <span><%= usuario.usuario %></span>
+      <form method="POST" action="/logout" style="display:inline">
+        <button type="submit" class="link-button">Salir</button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="content">
+    <h1>Resumen de todos los locales</h1>
+
+    <div class="tarjetas-resumen">
+      <div class="tarjeta"><h3><%= locales.length %></h3><p>Locales conectados</p></div>
+      <div class="tarjeta"><h3><%= moneyCL(totales.ventas_hoy_total) %></h3><p>Ventas de hoy (todos)</p></div>
+      <div class="tarjeta"><h3><%= totales.ventas_hoy_count %></h3><p>Transacciones hoy</p></div>
+      <div class="tarjeta"><h3><%= moneyCL(totales.cuentas_por_pagar_total) %></h3><p>Total por pagar (todos)</p></div>
+    </div>
+
+    <% if (locales.length === 0) { %>
+      <p style="margin-top:2rem; color:#888;">Todavía no se ha conectado ningún local. En cuanto un local sincronice, aparecerá aquí.</p>
+    <% } %>
+
+    <div class="locales-grid">
+      <% locales.forEach(l => { %>
+        <div class="local-card">
+          <div class="local-card-header">
+            <h2><%= l.local_nombre %></h2>
+            <span class="local-actualizado">Actualizado: <%= new Date(l.actualizado_en).toLocaleString('es-CL') %></span>
+          </div>
+
+          <div class="local-stats">
+            <div><strong><%= moneyCL(l.ventas_hoy_total) %></strong><span>Ventas hoy</span></div>
+            <div><strong><%= l.ventas_hoy_count %></strong><span>Transacciones</span></div>
+            <div><strong><%= moneyCL(l.cuentas_por_pagar_total) %></strong><span>Por pagar</span></div>
+          </div>
+
+          <details open>
+            <summary>Productos más vendidos</summary>
+            <table class="tabla-datos">
+              <thead><tr><th>Producto</th><th>Cantidad</th></tr></thead>
+              <tbody>
+                <% l.top_productos.forEach(p => { %>
+                  <tr><td><%= p.nombre %></td><td><%= p.cantidad %></td></tr>
+                <% }) %>
+                <% if (l.top_productos.length === 0) { %><tr><td colspan="2">Sin datos</td></tr><% } %>
+              </tbody>
+            </table>
+          </details>
+
+          <details>
+            <summary>Productos con bajo stock</summary>
+            <table class="tabla-datos">
+              <thead><tr><th>Producto</th><th>Existencia</th><th>Mínimo</th></tr></thead>
+              <tbody>
+                <% l.bajo_stock.forEach(p => { %>
+                  <tr class="fila-alerta"><td><%= p.nombre %></td><td><%= p.existencia %></td><td><%= p.stock_minimo %></td></tr>
+                <% }) %>
+                <% if (l.bajo_stock.length === 0) { %><tr><td colspan="3">Sin faltantes</td></tr><% } %>
+              </tbody>
+            </table>
+          </details>
+
+          <details>
+            <summary>Cuentas por pagar a proveedores</summary>
+            <table class="tabla-datos">
+              <thead><tr><th>Proveedor</th><th>Saldo</th></tr></thead>
+              <tbody>
+                <% l.cuentas_por_pagar.forEach(c => { %>
+                  <tr><td><%= c.proveedor %></td><td><%= moneyCL(c.saldo) %></td></tr>
+                <% }) %>
+                <% if (l.cuentas_por_pagar.length === 0) { %><tr><td colspan="2">Sin deudas pendientes</td></tr><% } %>
+              </tbody>
+            </table>
+          </details>
+        </div>
+      <% }) %>
+    </div>
+  </main>
+</body>
+</html>

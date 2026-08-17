@@ -128,6 +128,20 @@ body.pos-body .navbar { flex: none; }
 .fila-alerta { background: #fff8e1; }
 .acciones { display: flex; gap: 0.4rem; }
 
+/* Panel central */
+.locales-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.2rem; margin-top: 1rem; }
+.local-card { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.2rem; }
+.local-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.8rem; }
+.local-card-header h2 { margin: 0; }
+.local-actualizado { font-size: 0.78rem; color: #888; }
+.local-stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+.local-stats div { display: flex; flex-direction: column; }
+.local-stats strong { font-size: 1.2rem; }
+.local-stats span { font-size: 0.78rem; color: #888; }
+.local-card details { margin-top: 0.6rem; }
+.local-card summary { cursor: pointer; font-weight: 500; padding: 0.4rem 0; }
+.local-card table { margin-top: 0.4rem; }
+
 /* Modal */
 .modal {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);

@@ -3,14 +3,8 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const session = require('express-session');
 
-const authRoutes = require('./routes/auth');
-const ventasRoutes = require('./routes/ventas');
-const inventarioRoutes = require('./routes/inventario');
-const clientesRoutes = require('./routes/clientes');
-const proveedoresRoutes = require('./routes/proveedores');
-const reportesRoutes = require('./routes/reportes');
-
 const app = express();
+const APP_MODE = process.env.APP_MODE === 'central' ? 'central' : 'local';
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -29,18 +23,37 @@ app.use(session({
 // Formato de moneda para Chile (CLP): sin decimales, puntos de miles.
 app.locals.moneyCL = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
 
-app.get('/', (req, res) => res.redirect('/ventas'));
+if (APP_MODE === 'central') {
+  // Panel central: solo dashboard de solo lectura + API de sincronización.
+  // No monta el POS (ventas/inventario/etc.) para mantenerse liviano.
+  const { router: centralRoutes } = require('./routes/central');
+  app.get('/', (req, res) => res.redirect('/dashboard'));
+  app.use(centralRoutes);
+} else {
+  // Modo local: el POS completo, tal como corre en cada local.
+  const authRoutes = require('./routes/auth');
+  const ventasRoutes = require('./routes/ventas');
+  const inventarioRoutes = require('./routes/inventario');
+  const clientesRoutes = require('./routes/clientes');
+  const proveedoresRoutes = require('./routes/proveedores');
+  const reportesRoutes = require('./routes/reportes');
 
-app.use(authRoutes);
-app.use(ventasRoutes);
-app.use(inventarioRoutes);
-app.use(clientesRoutes);
-app.use(proveedoresRoutes);
-app.use(reportesRoutes);
+  app.get('/', (req, res) => res.redirect('/ventas'));
+  app.use(authRoutes);
+  app.use(ventasRoutes);
+  app.use(inventarioRoutes);
+  app.use(clientesRoutes);
+  app.use(proveedoresRoutes);
+  app.use(reportesRoutes);
+
+  if (process.env.CENTRAL_SYNC_URL) {
+    require('./services/sync').start();
+  }
+}
 
 app.use((req, res) => res.status(404).send('Página no encontrada'));
 
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => {
-  console.log(`Abarrotes POS corriendo en http://localhost:${PORT}`);
+  console.log(`Abarrotes POS (modo ${APP_MODE}) corriendo en http://localhost:${PORT}`);
 });
