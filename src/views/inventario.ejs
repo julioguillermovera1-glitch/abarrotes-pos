@@ -14,6 +14,11 @@
       <button class="btn btn-primary" onclick="document.getElementById('modalNuevo').style.display='flex'">+ Nuevo producto</button>
     </div>
 
+    <div class="pos-scan-bar" style="max-width:520px; margin-bottom:1.2rem">
+      <input type="text" id="escanearRecepcion" placeholder="Escanea el código para recibir mercadería..." autocomplete="off">
+      <div id="mensajeRecepcion" class="alert" style="display:none"></div>
+    </div>
+
     <details class="panel-categorias">
       <summary>Categorías</summary>
       <ul>
@@ -38,13 +43,13 @@
             <td><%= p.codigo_barra || '-' %></td>
             <td><%= p.nombre %></td>
             <td><%= p.categoria_nombre || '-' %></td>
-            <td><%= moneyCL(p.precio_compra) %></td>
-            <td><%= moneyCL(p.precio_venta) %></td>
-            <td><%= p.existencia %></td>
-            <td><%= p.stock_minimo %></td>
+            <td><%= moneyCL(p.precio_compra) %><%= p.tipo_venta === 'peso' ? ' /kg' : '' %></td>
+            <td><%= moneyCL(p.precio_venta) %><%= p.tipo_venta === 'peso' ? ' /kg' : '' %></td>
+            <td><%= p.tipo_venta === 'peso' ? (p.existencia / 1000).toLocaleString('es-CL', {maximumFractionDigits: 2}) + ' kg' : p.existencia %></td>
+            <td><%= p.tipo_venta === 'peso' ? (p.stock_minimo / 1000).toLocaleString('es-CL', {maximumFractionDigits: 2}) + ' kg' : p.stock_minimo %></td>
             <td><%= p.activo ? 'Activo' : 'Inactivo' %></td>
             <td class="acciones">
-              <button class="btn-mini" onclick="abrirMovimiento(<%= p.id %>, '<%= p.nombre.replace(/'/g, "\\'") %>')">Ajustar</button>
+              <button class="btn-mini" onclick="abrirMovimiento(<%= p.id %>, '<%= p.nombre.replace(/'/g, "\\'") %>', '<%= p.tipo_venta %>', <%= p.precio_compra %>)">Ajustar</button>
               <form method="POST" action="/inventario/productos/<%= p.id %>/desactivar" style="display:inline">
                 <button type="submit" class="btn-mini btn-danger"><%= p.activo ? 'Desactivar' : 'Activar' %></button>
               </form>
@@ -61,22 +66,33 @@
       <h2>Nuevo producto</h2>
       <form method="POST" action="/inventario/productos">
         <label>Código de barra</label>
-        <input type="text" name="codigo_barra">
+        <input type="text" name="codigo_barra" id="nuevoCodigoBarra">
         <label>Nombre</label>
-        <input type="text" name="nombre" required>
+        <input type="text" name="nombre" id="nuevoNombre" required>
         <label>Categoría</label>
         <select name="categoria_id">
           <option value="">-- Sin categoría --</option>
           <% categorias.forEach(c => { %><option value="<%= c.id %>"><%= c.nombre %></option><% }) %>
         </select>
-        <label>Precio de compra</label>
+
+        <label>¿Cómo se vende?</label>
+        <select name="tipo_venta" id="tipoVentaNuevo" onchange="actualizarEtiquetasNuevo()">
+          <option value="unidad">Por unidad (ej: una lata, un paquete)</option>
+          <option value="peso">Por peso (ej: pan, cecinas — se cobra por gramo)</option>
+        </select>
+
+        <label id="labelPrecioCompraNuevo">Precio de compra</label>
         <input type="number" step="1" min="0" name="precio_compra" required>
-        <label>Precio de venta</label>
+        <label id="labelPrecioVentaNuevo">Precio de venta</label>
         <input type="number" step="1" min="0" name="precio_venta" required>
-        <label>Existencia inicial</label>
+        <label id="labelExistenciaNuevo">Existencia inicial</label>
         <input type="number" name="existencia" value="0" required>
-        <label>Stock mínimo</label>
+        <label id="labelMinimoNuevo">Stock mínimo</label>
         <input type="number" name="stock_minimo" value="0" required>
+        <p class="ayuda-peso" id="ayudaPesoNuevo" style="display:none; font-size:0.82rem; color:#888; margin:0.2rem 0 0">
+          Para productos por peso: el precio es por <strong>kilo</strong>, y la existencia/mínimo se guardan en <strong>gramos</strong> (ej: 5 kg = 5000).
+        </p>
+
         <div class="modal-botones">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='none'">Cancelar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
@@ -96,8 +112,10 @@
           <option value="salida">Salida</option>
           <option value="ajuste">Ajuste</option>
         </select>
-        <label>Cantidad</label>
+        <label id="labelCantidadMovimiento">Cantidad</label>
         <input type="number" name="cantidad" min="1" required>
+        <label id="labelPrecioCompraMovimiento">Precio de compra (opcional, solo si cambió)</label>
+        <input type="number" step="1" min="0" name="precio_compra" id="inputPrecioCompraMovimiento" placeholder="Sin cambios">
         <label>Motivo</label>
         <input type="text" name="motivo">
         <div class="modal-botones">
@@ -109,10 +127,56 @@
   </div>
 
   <script>
-    function abrirMovimiento(id, nombre) {
+    function abrirMovimiento(id, nombre, tipoVenta, precioCompraActual) {
       document.getElementById('movProductoNombre').textContent = nombre;
       document.getElementById('formMovimiento').action = `/inventario/productos/${id}/movimiento`;
+      document.getElementById('formMovimiento').reset();
+      document.getElementById('labelCantidadMovimiento').textContent = tipoVenta === 'peso' ? 'Cantidad (en gramos)' : 'Cantidad';
+      document.getElementById('labelPrecioCompraMovimiento').textContent = tipoVenta === 'peso'
+        ? 'Precio de compra por kilo (opcional, solo si cambió)' : 'Precio de compra (opcional, solo si cambió)';
+      document.getElementById('inputPrecioCompraMovimiento').placeholder = `Sin cambios (actual: $${Math.round(precioCompraActual || 0).toLocaleString('es-CL')})`;
       document.getElementById('modalMovimiento').style.display = 'flex';
+    }
+
+    // --- Recepción rápida de mercadería: escaneas el código y se abre el mismo cuadro de "Ajustar" ---
+    const escanearRecepcion = document.getElementById('escanearRecepcion');
+    const mensajeRecepcion = document.getElementById('mensajeRecepcion');
+    escanearRecepcion.addEventListener('keydown', async (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const codigo = escanearRecepcion.value.trim();
+      if (!codigo) return;
+      mensajeRecepcion.style.display = 'none';
+
+      const res = await fetch(`/api/inventario/codigo/${encodeURIComponent(codigo)}`);
+      if (!res.ok) {
+        // Código nuevo, nunca visto: se abre "Nuevo producto" con el código ya cargado.
+        mensajeRecepcion.textContent = `Código "${codigo}" no registrado todavía. Completa los datos para crear el producto.`;
+        mensajeRecepcion.className = 'alert';
+        mensajeRecepcion.style.display = 'block';
+        abrirNuevoConCodigo(codigo);
+        escanearRecepcion.value = '';
+        return;
+      }
+      const producto = await res.json();
+      abrirMovimiento(producto.id, producto.nombre, producto.tipo_venta, producto.precio_compra);
+      escanearRecepcion.value = '';
+      setTimeout(() => document.querySelector('#formMovimiento input[name="cantidad"]').focus(), 50);
+    });
+
+    function abrirNuevoConCodigo(codigo) {
+      document.getElementById('modalNuevo').style.display = 'flex';
+      document.getElementById('nuevoCodigoBarra').value = codigo;
+      setTimeout(() => document.getElementById('nuevoNombre').focus(), 50);
+    }
+
+    function actualizarEtiquetasNuevo() {
+      const esPeso = document.getElementById('tipoVentaNuevo').value === 'peso';
+      document.getElementById('labelPrecioCompraNuevo').textContent = esPeso ? 'Precio de compra (por kilo)' : 'Precio de compra';
+      document.getElementById('labelPrecioVentaNuevo').textContent = esPeso ? 'Precio de venta (por kilo)' : 'Precio de venta';
+      document.getElementById('labelExistenciaNuevo').textContent = esPeso ? 'Existencia inicial (en gramos)' : 'Existencia inicial';
+      document.getElementById('labelMinimoNuevo').textContent = esPeso ? 'Stock mínimo (en gramos)' : 'Stock mínimo';
+      document.getElementById('ayudaPesoNuevo').style.display = esPeso ? 'block' : 'none';
     }
   </script>
 </body>

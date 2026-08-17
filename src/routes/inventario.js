@@ -14,22 +14,35 @@ router.get('/inventario', requireLogin, async (req, res) => {
   res.render('inventario', { usuario: req.session.usuario, productos, categorias });
 });
 
+// Búsqueda exacta por código de barra, para la recepción rápida de mercadería (escanear + Enter).
+router.get('/api/inventario/codigo/:codigo', requireLogin, async (req, res) => {
+  const [[producto]] = await pool.query(
+    `SELECT id, codigo_barra, nombre, tipo_venta, existencia, stock_minimo, precio_compra
+     FROM productos WHERE codigo_barra = ? LIMIT 1`,
+    [req.params.codigo]
+  );
+  if (!producto) return res.status(404).json({ error: 'No encontrado' });
+  res.json(producto);
+});
+
 router.post('/inventario/productos', requireLogin, async (req, res) => {
-  const { codigo_barra, nombre, categoria_id, precio_compra, precio_venta, existencia, stock_minimo } = req.body;
+  const { codigo_barra, nombre, categoria_id, tipo_venta, precio_compra, precio_venta, existencia, stock_minimo } = req.body;
   await pool.query(
-    `INSERT INTO productos (codigo_barra, nombre, categoria_id, precio_compra, precio_venta, existencia, stock_minimo)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [codigo_barra || null, nombre, categoria_id || null, precio_compra || 0, precio_venta || 0, existencia || 0, stock_minimo || 0]
+    `INSERT INTO productos (codigo_barra, nombre, categoria_id, tipo_venta, precio_compra, precio_venta, existencia, stock_minimo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [codigo_barra || null, nombre, categoria_id || null, tipo_venta === 'peso' ? 'peso' : 'unidad',
+     precio_compra || 0, precio_venta || 0, existencia || 0, stock_minimo || 0]
   );
   res.redirect('/inventario');
 });
 
 router.post('/inventario/productos/:id/editar', requireLogin, async (req, res) => {
-  const { codigo_barra, nombre, categoria_id, precio_compra, precio_venta, stock_minimo } = req.body;
+  const { codigo_barra, nombre, categoria_id, tipo_venta, precio_compra, precio_venta, stock_minimo } = req.body;
   await pool.query(
-    `UPDATE productos SET codigo_barra=?, nombre=?, categoria_id=?, precio_compra=?, precio_venta=?, stock_minimo=?
+    `UPDATE productos SET codigo_barra=?, nombre=?, categoria_id=?, tipo_venta=?, precio_compra=?, precio_venta=?, stock_minimo=?
      WHERE id=?`,
-    [codigo_barra || null, nombre, categoria_id || null, precio_compra || 0, precio_venta || 0, stock_minimo || 0, req.params.id]
+    [codigo_barra || null, nombre, categoria_id || null, tipo_venta === 'peso' ? 'peso' : 'unidad',
+     precio_compra || 0, precio_venta || 0, stock_minimo || 0, req.params.id]
   );
   res.redirect('/inventario');
 });
@@ -41,13 +54,16 @@ router.post('/inventario/productos/:id/desactivar', requireLogin, async (req, re
 
 // Ajuste manual de existencias (entrada/salida/ajuste)
 router.post('/inventario/productos/:id/movimiento', requireLogin, async (req, res) => {
-  const { tipo, cantidad, motivo } = req.body;
+  const { tipo, cantidad, motivo, precio_compra } = req.body;
   const cant = Number(cantidad);
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const delta = tipo === 'salida' ? -cant : cant; // 'entrada' y 'ajuste' positivo suman
     await conn.query('UPDATE productos SET existencia = existencia + ? WHERE id = ?', [delta, req.params.id]);
+    if (precio_compra) {
+      await conn.query('UPDATE productos SET precio_compra = ? WHERE id = ?', [precio_compra, req.params.id]);
+    }
     await conn.query(
       `INSERT INTO movimientos_inventario (producto_id, tipo, cantidad, motivo, usuario_id)
        VALUES (?, ?, ?, ?, ?)`,

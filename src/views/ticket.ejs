@@ -16,7 +16,9 @@
     <table class="ticket-tabla">
       <% detalle.forEach(d => { %>
         <tr>
-          <td><%= d.producto_nombre %> x<%= d.cantidad %></td>
+          <td><%= d.producto_nombre %>
+            <%= d.tipo_venta === 'peso' ? `(${(d.cantidad/1000).toLocaleString('es-CL', {maximumFractionDigits: 3})} kg)` : `x${d.cantidad}` %>
+          </td>
           <td><%= moneyCL(d.subtotal) %></td>
         </tr>
       <% }) %>
@@ -30,7 +32,6 @@
     <% } %>
     <hr>
     <p class="ticket-gracias">¡Gracias por su compra!</p>
-    <button onclick="window.print()" class="btn btn-primary no-print">Imprimir</button>
   </div>
 </body>
 </html>

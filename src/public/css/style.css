@@ -16,15 +16,20 @@ body {
   padding: 0.8rem 1.5rem;
 }
 .navbar-brand { font-weight: bold; font-size: 1.2rem; }
+.navbar-links { display: flex; align-items: center; }
 .navbar-links a {
+  display: flex;
+  align-items: center;
   color: #cfe0ee;
   text-decoration: none;
-  margin: 0 0.7rem;
-  padding: 0.4rem 0.6rem;
+  margin: 0 0.35rem;
+  padding: 0.5rem 0.7rem;
   border-radius: 4px;
 }
 .navbar-links a.active, .navbar-links a:hover { background: #2c5478; color: white; }
 .navbar-user { display: flex; align-items: center; gap: 0.8rem; }
+.navbar-user a { display: flex; align-items: center; color: #cfe0ee; text-decoration: none; padding: 0.5rem 0.7rem; border-radius: 4px; }
+.navbar-user a.active, .navbar-user a:hover { background: #2c5478; color: white; }
 .link-button {
   background: none; border: none; color: #cfe0ee; cursor: pointer; text-decoration: underline;
 }
@@ -61,20 +66,39 @@ body {
 .content { padding: 1.5rem 2rem; }
 .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 
-/* POS — cuadrícula de productos táctil a la izquierda, venta + cobro a la derecha */
+/* POS — pantalla de venta a una sola columna, a todo el ancho */
 html, body.pos-body { height: 100%; }
 body.pos-body { display: flex; flex-direction: column; overflow: hidden; }
 body.pos-body .navbar { flex: none; }
 
+/* Pestañas superiores: Nueva venta / Ventas de hoy */
+.pos-tabs { flex: none; display: flex; gap: 0.4rem; padding: 0.8rem 1.2rem 0; }
+.pos-tab {
+  padding: 0.6rem 1.4rem; border: none; border-radius: 8px 8px 0 0;
+  background: #e0e4e8; color: #333; font-size: 0.95rem; cursor: pointer;
+}
+.pos-tab.active { background: white; font-weight: 600; color: #1b3a57; }
+
 .pos-layout {
-  display: flex; flex-direction: row;
+  display: flex; flex-direction: column;
   flex: 1; min-height: 0;
   padding: 1rem 1.2rem;
-  gap: 1rem;
 }
 
-.pos-productos {
-  flex: 1.5; min-width: 0; display: flex; flex-direction: column; min-height: 0; gap: 0.7rem;
+/* Estado inicial: solo el botón grande de "+ Nueva venta", centrado */
+.pos-inicio {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+}
+.btn-nueva-venta {
+  background: #1b3a57; color: white; border: none; border-radius: 12px;
+  padding: 2rem 3.5rem; font-size: 1.8rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.btn-nueva-venta:hover { background: #2c5478; }
+
+/* Estado activo: todo apilado en una sola columna, a todo el ancho */
+.pos-venta-activa {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.8rem;
 }
 
 /* Barra de escaneo: con los resultados de búsqueda flotando debajo */
@@ -94,37 +118,9 @@ body.pos-body .navbar { flex: none; }
 .resultado-item .existencia { color: #888; font-size: 0.85rem; }
 .resultado-vacio { padding: 0.6rem 1rem; color: #888; background: white; border-radius: 6px; }
 
-/* Pestañas de categoría */
-.categorias-tabs { flex: none; display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.2rem; }
-.categoria-tab {
-  flex: none; padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #ccc;
-  background: white; cursor: pointer; font-size: 0.9rem; white-space: nowrap;
-}
-.categoria-tab.active { background: #1b3a57; color: white; border-color: #1b3a57; }
-
-/* Cuadrícula de productos: botones grandes, pensados para dedo o mouse */
-.productos-grid {
-  flex: 1; min-height: 0; overflow-y: auto;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem;
-  align-content: start;
-}
-.producto-btn {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
-  background: white; border: 1px solid #e0e4e8; border-radius: 10px;
-  padding: 0.9rem; min-height: 90px; cursor: pointer; text-align: left;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  transition: transform 0.05s, box-shadow 0.1s;
-}
-.producto-btn:hover { border-color: #1b3a57; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-.producto-btn:active { transform: scale(0.97); background: #f0f4f8; }
-.producto-btn.sin-stock { opacity: 0.45; cursor: not-allowed; }
-.producto-btn-nombre { font-weight: 600; font-size: 0.95rem; line-height: 1.25; }
-.producto-btn-precio { font-size: 1.1rem; font-weight: bold; color: #1b3a57; }
-.producto-btn-stock { font-size: 0.75rem; color: #888; }
-
-/* La venta actual: barra lateral fija a la derecha, con el cobro debajo */
+/* Venta actual: a todo el ancho, debajo de la barra de escaneo */
 .pos-venta-full {
-  flex: 1; max-width: 420px; min-width: 320px;
+  flex: 1; width: 100%;
   min-height: 0; display: flex; flex-direction: column;
   background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   padding: 1rem 1.2rem;
@@ -132,7 +128,7 @@ body.pos-body .navbar { flex: none; }
 .venta-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
 .venta-header .total-box { font-size: 1.6rem; font-weight: bold; margin: 0; }
 
-.tabla-carrito-wrapper { flex: 1; min-height: 0; overflow-y: auto; }
+.tabla-carrito-wrapper { flex: 1; min-height: 100px; overflow-y: auto; }
 .tabla-carrito { width: 100%; border-collapse: collapse; }
 .tabla-carrito th, .tabla-carrito td { padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.95rem; white-space: nowrap; }
 .tabla-carrito thead th { position: sticky; top: 0; background: white; z-index: 1; }
@@ -140,22 +136,25 @@ body.pos-body .navbar { flex: none; }
 .producto-nombre { font-weight: 500; white-space: normal; }
 .producto-codigo { color: #888; font-size: 0.78rem; font-family: 'Courier New', monospace; white-space: nowrap; }
 
-/* Barra de pago: apilada debajo de la venta, dentro de la misma barra lateral */
+/* Barra de pago: fila horizontal debajo del carrito */
 .pos-pago-bar {
-  flex: none; display: flex; flex-direction: column; gap: 0.7rem;
+  flex: none; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.2rem;
   border-top: 1px solid #eee; margin-top: 0.7rem; padding-top: 0.8rem;
 }
 .pago-tipo { display: flex; gap: 1.2rem; align-items: center; }
-.pago-campo { display: flex; flex-direction: column; gap: 0.3rem; }
+.pago-campo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 160px; }
 .pago-campo label { font-size: 0.85rem; color: #555; }
 .pago-campo input, .pago-campo select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; }
 .pago-campo .cambio { font-size: 1.1rem; font-weight: bold; padding: 0.3rem 0; }
-.btn-cobrar { width: 100%; padding: 0.9rem; font-size: 1.15rem; }
+
+.pos-pago-botones { display: flex; gap: 0.7rem; margin-left: auto; }
+.btn-cobrar { padding: 0.9rem 2rem; font-size: 1.15rem; }
 .pos-mensaje { flex: none; margin: 0.6rem 0 0; }
 
 @media (max-width: 900px) {
-  .pos-layout { flex-direction: column; }
-  .pos-venta-full { max-width: none; }
+  .pos-pago-bar { flex-direction: column; align-items: stretch; }
+  .pos-pago-botones { margin-left: 0; }
+  .btn-cobrar { width: 100%; }
 }
 
 /* Tablas de datos */
@@ -211,4 +210,3 @@ body.pos-body .navbar { flex: none; }
 .ticket-tabla td { padding: 0.2rem 0; font-size: 0.9rem; }
 .ticket-total { font-size: 1.2rem; font-weight: bold; }
 .ticket-gracias { text-align: center; margin-top: 1rem; }
-@media print { .no-print { display: none; } }

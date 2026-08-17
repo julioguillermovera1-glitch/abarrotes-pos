@@ -6,6 +6,10 @@
     <a href="/clientes" class="<%= typeof active !== 'undefined' && active === 'clientes' ? 'active' : '' %>">Clientes</a>
     <a href="/proveedores" class="<%= typeof active !== 'undefined' && active === 'proveedores' ? 'active' : '' %>">Proveedores</a>
     <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
+    <a href="/caja" class="<%= typeof active !== 'undefined' && active === 'caja' ? 'active' : '' %>">Caja</a>
+    <% if (usuario.rol === 'admin') { %>
+      <a href="/usuarios" class="<%= typeof active !== 'undefined' && active === 'usuarios' ? 'active' : '' %>">Usuarios</a>
+    <% } %>
   </div>
   <div class="navbar-user">
     <a href="/setup-sync" class="<%= typeof active !== 'undefined' && active === 'setup' ? 'active' : '' %>">🔗 Panel central</a>

@@ -20,7 +20,12 @@
   <main class="content">
     <div class="content-header">
       <h1>Resumen de todos los locales</h1>
-      <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
+      <div style="display:flex; gap:0.6rem">
+        <form method="POST" action="/api/limpiar-locales" onsubmit="return confirm('¿Desconectar TODOS los locales del panel? Cada uno deberá emparejarse de nuevo con un código.')">
+          <button type="submit" class="btn btn-secondary">🧹 Desconectar todos los locales</button>
+        </form>
+        <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
+      </div>
     </div>
 
     <div class="tarjetas-resumen">

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS productos (
   categoria_id INT,
   precio_compra DECIMAL(10,2) NOT NULL DEFAULT 0,
   precio_venta DECIMAL(10,2) NOT NULL DEFAULT 0,
+  tipo_venta ENUM('unidad','peso') NOT NULL DEFAULT 'unidad',
   existencia INT NOT NULL DEFAULT 0,
   stock_minimo INT NOT NULL DEFAULT 0,
   activo TINYINT(1) NOT NULL DEFAULT 1,
@@ -53,10 +54,26 @@ CREATE TABLE IF NOT EXISTS clientes (
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS turnos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  monto_apertura DECIMAL(10,2) NOT NULL DEFAULT 0,
+  abierto_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  cerrado_en TIMESTAMP NULL,
+  usuario_cierre_id INT,
+  monto_esperado DECIMAL(10,2),
+  monto_cierre DECIMAL(10,2),
+  diferencia DECIMAL(10,2),
+  estado ENUM('abierto','cerrado') NOT NULL DEFAULT 'abierto',
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  FOREIGN KEY (usuario_cierre_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS ventas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   cliente_id INT,
   usuario_id INT,
+  turno_id INT,
   tipo_pago ENUM('efectivo','credito') NOT NULL DEFAULT 'efectivo',
   total DECIMAL(10,2) NOT NULL DEFAULT 0,
   pagado_con DECIMAL(10,2),
@@ -64,7 +81,8 @@ CREATE TABLE IF NOT EXISTS ventas (
   estado ENUM('completada','cancelada') NOT NULL DEFAULT 'completada',
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
-  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (turno_id) REFERENCES turnos(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS venta_detalle (

@@ -8,82 +8,151 @@
 <body class="pos-body">
   <%- include('partials/nav', { active: 'ventas' }) %>
 
-  <main class="pos-layout">
-    <section class="pos-productos">
+  <div class="pos-tabs">
+    <button class="pos-tab active" id="tabNuevaVentaBtn" onclick="mostrarTab('nuevaVenta')">Nueva venta</button>
+    <button class="pos-tab" id="tabVentasHoyBtn" onclick="mostrarTab('ventasHoy')">Ventas de hoy</button>
+  </div>
+
+  <main class="pos-layout" id="tabNuevaVenta">
+    <!-- Estado inicial: solo el botón para empezar -->
+    <section id="inicioVenta" class="pos-inicio">
+      <% if (!turno) { %>
+        <div style="text-align:center">
+          <div class="alert alert-error" style="max-width:420px">No hay caja abierta. Abre el turno antes de vender.</div>
+          <a href="/caja" class="btn btn-primary" style="display:inline-block; margin-top:0.8rem">Ir a Caja</a>
+        </div>
+      <% } else { %>
+        <button id="btnNuevaVenta" class="btn-nueva-venta">+ Nueva venta</button>
+      <% } %>
+    </section>
+
+    <!-- Estado activo: escaneo + cuadrícula + venta actual (se muestra al presionar "+ Nueva venta") -->
+    <section id="ventaActiva" class="pos-venta-activa" style="display:none">
       <div class="pos-scan-bar">
-        <input type="text" id="escanearProducto" placeholder="Escanea o escribe el código de barra, o toca un producto abajo..." autofocus autocomplete="off">
+        <input type="text" id="escanearProducto" placeholder="Escanea o escribe el código o nombre del producto..." autocomplete="off">
         <div id="resultados" class="resultados-lista"></div>
         <div id="mensajeEscaneo" class="alert" style="display:none"></div>
       </div>
 
-      <div class="categorias-tabs" id="categoriasTabs">
-        <button class="categoria-tab active" data-cat="todas">Todas</button>
-        <% categorias.forEach(c => { %>
-          <button class="categoria-tab" data-cat="<%= c.id %>"><%= c.nombre %></button>
-        <% }) %>
-      </div>
+      <div class="pos-venta-full">
+        <div class="venta-header">
+          <h2>Venta actual</h2>
+          <div class="total-box">Total: <span id="totalVenta">$0</span></div>
+        </div>
 
-      <div class="productos-grid" id="productosGrid">
-        <% productos.forEach(p => { %>
-          <button class="producto-btn <%= p.existencia < 1 ? 'sin-stock' : '' %>"
-                  data-cat="<%= p.categoria_id || '' %>"
-                  data-producto='<%- JSON.stringify({id: p.id, codigo_barra: p.codigo_barra, nombre: p.nombre, precio_venta: p.precio_venta, existencia: p.existencia}) %>'>
-            <span class="producto-btn-nombre"><%= p.nombre %></span>
-            <span class="producto-btn-precio"><%= moneyCL(p.precio_venta) %></span>
-            <span class="producto-btn-stock"><%= p.existencia < 1 ? 'Sin stock' : 'Stock: ' + p.existencia %></span>
-          </button>
-        <% }) %>
+        <div class="tabla-carrito-wrapper">
+          <table class="tabla-carrito">
+            <thead>
+              <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr>
+            </thead>
+            <tbody id="ventaBody"></tbody>
+          </table>
+        </div>
+
+        <section class="pos-pago-bar">
+          <div class="pago-tipo">
+            <label><input type="radio" name="tipo_pago" value="efectivo" checked> Efectivo</label>
+            <label><input type="radio" name="tipo_pago" value="credito"> Crédito</label>
+          </div>
+
+          <div id="clienteBox" class="pago-campo" style="display:none">
+            <label>Cliente</label>
+            <select id="clienteSelect">
+              <option value="">-- Selecciona --</option>
+              <% clientes.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.nombre %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div id="efectivoBox" class="pago-campo">
+            <label>Pagado con</label>
+            <input type="number" id="pagadoCon" step="1" min="0">
+          </div>
+
+          <div class="pago-campo">
+            <label>Cambio</label>
+            <div class="cambio" id="cambioVenta">$0</div>
+          </div>
+
+          <div class="pos-pago-botones">
+            <button id="btnCancelarVenta" class="btn btn-secondary">Cancelar venta</button>
+            <button id="btnCobrar" class="btn btn-primary btn-cobrar">Cobrar</button>
+          </div>
+        </section>
+
+        <div id="mensajeVenta" class="alert pos-mensaje" style="display:none"></div>
       </div>
     </section>
+  </main>
 
-    <aside class="pos-venta-full">
-      <div class="venta-header">
-        <h2>Venta actual</h2>
-        <div class="total-box">Total: <span id="totalVenta">$0</span></div>
-      </div>
+  <main class="content" id="tabVentasHoy" style="display:none">
+    <div class="tarjetas-resumen">
+      <div class="tarjeta"><h3><%= resumenHoy.num_ventas %></h3><p>Ventas de hoy</p></div>
+      <div class="tarjeta"><h3><%= moneyCL(resumenHoy.total_hoy) %></h3><p>Total vendido hoy</p></div>
+    </div>
 
-      <div class="tabla-carrito-wrapper">
-        <table class="tabla-carrito">
-          <thead>
-            <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr>
-          </thead>
-          <tbody id="ventaBody"></tbody>
+    <div class="reportes-grid">
+      <div>
+        <h2>Ventas de hoy</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Hora</th><th>Vendedor</th><th>Cliente</th><th>Pago</th><th>Total</th></tr></thead>
+          <tbody>
+            <% ventasHoy.forEach(v => { %>
+              <tr>
+                <td><a href="/ventas/<%= v.id %>/ticket" target="_blank"><%= new Date(v.creado_en).toLocaleTimeString('es-CL') %></a></td>
+                <td><%= v.usuario_nombre || '-' %></td>
+                <td><%= v.cliente_nombre || 'Mostrador' %></td>
+                <td><%= v.tipo_pago === 'credito' ? 'Crédito' : 'Efectivo' %></td>
+                <td><%= moneyCL(v.total) %></td>
+              </tr>
+            <% }) %>
+            <% if (ventasHoy.length === 0) { %><tr><td colspan="5">Todavía no hay ventas hoy</td></tr><% } %>
+          </tbody>
         </table>
       </div>
 
-      <section class="pos-pago-bar">
-        <div class="pago-tipo">
-          <label><input type="radio" name="tipo_pago" value="efectivo" checked> Efectivo</label>
-          <label><input type="radio" name="tipo_pago" value="credito"> Crédito</label>
-        </div>
-
-        <div id="clienteBox" class="pago-campo" style="display:none">
-          <label>Cliente</label>
-          <select id="clienteSelect">
-            <option value="">-- Selecciona --</option>
-            <% clientes.forEach(c => { %>
-              <option value="<%= c.id %>"><%= c.nombre %></option>
+      <div>
+        <h2>Productos más vendidos hoy</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Total</th></tr></thead>
+          <tbody>
+            <% masVendidosHoy.forEach(p => { %>
+              <tr>
+                <td><%= p.nombre %></td>
+                <td><%= p.tipo_venta === 'peso' ? (p.cantidad/1000).toLocaleString('es-CL', {maximumFractionDigits:2}) + ' kg' : p.cantidad %></td>
+                <td><%= moneyCL(p.total) %></td>
+              </tr>
             <% }) %>
-          </select>
-        </div>
-
-        <div id="efectivoBox" class="pago-campo">
-          <label>Pagado con</label>
-          <input type="number" id="pagadoCon" step="1" min="0">
-        </div>
-
-        <div class="pago-campo">
-          <label>Cambio</label>
-          <div class="cambio" id="cambioVenta">$0</div>
-        </div>
-
-        <button id="btnCobrar" class="btn btn-primary btn-cobrar">Cobrar</button>
-      </section>
-
-      <div id="mensajeVenta" class="alert pos-mensaje" style="display:none"></div>
-    </aside>
+            <% if (masVendidosHoy.length === 0) { %><tr><td colspan="3">Todavía no hay ventas hoy</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 
+  <!-- Modal: pedir gramos para productos que se venden por peso -->
+  <div id="modalPeso" class="modal">
+    <div class="modal-contenido">
+      <h2 id="modalPesoTitulo">Producto por peso</h2>
+      <label>Gramos</label>
+      <input type="number" id="modalPesoGramos" min="1" step="1" placeholder="Ej: 250">
+      <p style="margin:0.5rem 0; color:#555">Precio: <strong id="modalPesoPrecio">$0</strong></p>
+      <div class="modal-botones">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalPeso()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="confirmarModalPeso()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function mostrarTab(tab) {
+      document.getElementById('tabNuevaVenta').style.display = tab === 'nuevaVenta' ? 'flex' : 'none';
+      document.getElementById('tabVentasHoy').style.display = tab === 'ventasHoy' ? 'block' : 'none';
+      document.getElementById('tabNuevaVentaBtn').classList.toggle('active', tab === 'nuevaVenta');
+      document.getElementById('tabVentasHoyBtn').classList.toggle('active', tab === 'ventasHoy');
+    }
+  </script>
   <script src="/js/ventas.js"></script>
 </body>
 </html>

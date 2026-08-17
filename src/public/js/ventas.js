@@ -1,9 +1,11 @@
-const venta = []; // {producto_id, nombre, precio_venta, cantidad, existencia}
+const venta = []; // {producto_id, nombre, precio_venta, tipo_venta, cantidad, existencia}
 
 function moneyCL(n) {
   return '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
 }
 
+const inicioVenta = document.getElementById('inicioVenta');
+const ventaActiva = document.getElementById('ventaActiva');
 const escanearInput = document.getElementById('escanearProducto');
 const resultadosDiv = document.getElementById('resultados');
 const mensajeEscaneo = document.getElementById('mensajeEscaneo');
@@ -17,6 +19,30 @@ const efectivoBox = document.getElementById('efectivoBox');
 
 let ultimosResultados = [];
 let debounceTimer;
+
+// --- "+ Nueva venta": revela la zona de trabajo (escaneo + venta) ---
+document.getElementById('btnNuevaVenta').addEventListener('click', () => {
+  inicioVenta.style.display = 'none';
+  ventaActiva.style.display = 'flex';
+  escanearInput.focus();
+});
+
+document.getElementById('btnCancelarVenta').addEventListener('click', () => {
+  if (venta.length > 0 && !confirm('¿Cancelar esta venta? Se perderán los productos agregados.')) return;
+  volverAlInicio();
+});
+
+function volverAlInicio() {
+  venta.length = 0;
+  renderVenta();
+  pagadoConEl.value = '';
+  escanearInput.value = '';
+  resultadosDiv.innerHTML = '';
+  mensajeVenta.style.display = 'none';
+  mensajeEscaneo.style.display = 'none';
+  ventaActiva.style.display = 'none';
+  inicioVenta.style.display = 'flex';
+}
 
 escanearInput.addEventListener('input', () => {
   clearTimeout(debounceTimer);
@@ -66,8 +92,8 @@ function renderResultados(productos) {
   resultadosDiv.innerHTML = productos.map(p => `
     <div class="resultado-item" data-id="${p.id}">
       <span>${p.nombre}</span>
-      <span>${moneyCL(p.precio_venta)}</span>
-      <span class="existencia">Stock: ${p.existencia}</span>
+      <span>${moneyCL(p.precio_venta)}${p.tipo_venta === 'peso' ? ' /kg' : ''}</span>
+      <span class="existencia">Stock: ${p.tipo_venta === 'peso' ? (p.existencia/1000).toLocaleString('es-CL', {maximumFractionDigits:2}) + ' kg' : p.existencia}</span>
     </div>
   `).join('');
   resultadosDiv.querySelectorAll('.resultado-item').forEach((el, i) => {
@@ -75,28 +101,12 @@ function renderResultados(productos) {
   });
 }
 
-// --- Cuadrícula de productos táctil: tocar/hacer clic agrega directo a la venta ---
-document.querySelectorAll('.producto-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const producto = JSON.parse(btn.dataset.producto);
-    agregarAVenta(producto);
-  });
-});
-
-document.querySelectorAll('.categoria-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.categoria-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    const cat = tab.dataset.cat;
-    document.querySelectorAll('.producto-btn').forEach(btn => {
-      const coincide = cat === 'todas' || btn.dataset.cat === cat;
-      btn.style.display = coincide ? '' : 'none';
-    });
-  });
-});
-
 function agregarAVenta(producto) {
   mensajeEscaneo.style.display = 'none';
+  if (producto.tipo_venta === 'peso') {
+    abrirModalPeso(producto);
+    return;
+  }
   const existente = venta.find(i => i.producto_id === producto.id);
   if (existente) {
     if (existente.cantidad + 1 > producto.existencia) {
@@ -114,6 +124,7 @@ function agregarAVenta(producto) {
       nombre: producto.nombre,
       codigo_barra: producto.codigo_barra,
       precio_venta: Number(producto.precio_venta),
+      tipo_venta: 'unidad',
       cantidad: 1,
       existencia: producto.existencia
     });
@@ -125,23 +136,81 @@ function agregarAVenta(producto) {
   renderVenta();
 }
 
+// --- Modal de productos por peso (pan, cecinas, etc.): pide gramos y calcula el precio solo ---
+let productoPesoActual = null;
+
+function abrirModalPeso(producto) {
+  productoPesoActual = producto;
+  document.getElementById('modalPesoTitulo').textContent = `${producto.nombre} (${moneyCL(producto.precio_venta)}/kg)`;
+  const input = document.getElementById('modalPesoGramos');
+  input.value = '';
+  document.getElementById('modalPesoPrecio').textContent = '$0';
+  document.getElementById('modalPeso').style.display = 'flex';
+  input.oninput = () => {
+    const gramos = Number(input.value) || 0;
+    document.getElementById('modalPesoPrecio').textContent = moneyCL((producto.precio_venta / 1000) * gramos);
+  };
+  setTimeout(() => input.focus(), 50);
+}
+
+function cerrarModalPeso() {
+  document.getElementById('modalPeso').style.display = 'none';
+  productoPesoActual = null;
+}
+
+function confirmarModalPeso() {
+  const gramos = Number(document.getElementById('modalPesoGramos').value);
+  if (!gramos || gramos <= 0) { mostrarMensajeEscaneo('Ingresa los gramos', 'error'); return; }
+  const producto = productoPesoActual;
+
+  const existente = venta.find(i => i.producto_id === producto.id);
+  const gramosActuales = existente ? existente.cantidad : 0;
+  if (gramosActuales + gramos > producto.existencia) {
+    mostrarMensajeEscaneo(`No hay suficiente existencia (disponible: ${((producto.existencia - gramosActuales)/1000).toLocaleString('es-CL', {maximumFractionDigits:2})} kg)`, 'error');
+    return;
+  }
+
+  if (existente) {
+    existente.cantidad += gramos;
+  } else {
+    venta.push({
+      producto_id: producto.id,
+      nombre: producto.nombre,
+      codigo_barra: producto.codigo_barra,
+      precio_venta: Number(producto.precio_venta),
+      tipo_venta: 'peso',
+      cantidad: gramos,
+      existencia: producto.existencia
+    });
+  }
+
+  cerrarModalPeso();
+  escanearInput.value = '';
+  resultadosDiv.innerHTML = '';
+  ultimosResultados = [];
+  escanearInput.focus();
+  renderVenta();
+}
+
 function renderVenta() {
-  ventaBody.innerHTML = venta.map((item, idx) => `
+  ventaBody.innerHTML = venta.map((item, idx) => {
+    const esPeso = item.tipo_venta === 'peso';
+    const cantidadHtml = esPeso
+      ? `${(item.cantidad/1000).toLocaleString('es-CL', {maximumFractionDigits:3})} kg`
+      : `<button class="btn-mini" onclick="cambiarCantidad(${idx}, -1)">-</button> ${item.cantidad} <button class="btn-mini" onclick="cambiarCantidad(${idx}, 1)">+</button>`;
+    const subtotal = esPeso ? (item.precio_venta / 1000) * item.cantidad : item.precio_venta * item.cantidad;
+    return `
     <tr>
       <td>
         <div class="producto-nombre">${item.nombre}</div>
         <div class="producto-codigo">${item.codigo_barra || ''}</div>
       </td>
-      <td>
-        <button class="btn-mini" onclick="cambiarCantidad(${idx}, -1)">-</button>
-        ${item.cantidad}
-        <button class="btn-mini" onclick="cambiarCantidad(${idx}, 1)">+</button>
-      </td>
-      <td>${moneyCL(item.precio_venta)}</td>
-      <td>${moneyCL(item.precio_venta * item.cantidad)}</td>
+      <td>${cantidadHtml}</td>
+      <td>${moneyCL(item.precio_venta)}${esPeso ? '/kg' : ''}</td>
+      <td>${moneyCL(subtotal)}</td>
       <td><button class="btn-mini btn-danger" onclick="quitarItem(${idx})">✕</button></td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
   actualizarTotal();
 }
 
@@ -159,14 +228,18 @@ function quitarItem(idx) {
   renderVenta();
 }
 
+function subtotalItem(item) {
+  return item.tipo_venta === 'peso' ? (item.precio_venta / 1000) * item.cantidad : item.precio_venta * item.cantidad;
+}
+
 function actualizarTotal() {
-  const total = venta.reduce((s, i) => s + i.precio_venta * i.cantidad, 0);
+  const total = venta.reduce((s, i) => s + subtotalItem(i), 0);
   totalVentaEl.textContent = moneyCL(total);
   actualizarCambio();
 }
 
 function actualizarCambio() {
-  const total = venta.reduce((s, i) => s + i.precio_venta * i.cantidad, 0);
+  const total = venta.reduce((s, i) => s + subtotalItem(i), 0);
   const pagado = Number(pagadoConEl.value || 0);
   const cambio = pagado - total;
   cambioVentaEl.textContent = moneyCL(cambio >= 0 ? cambio : 0);
@@ -215,14 +288,7 @@ document.getElementById('btnCobrar').addEventListener('click', async () => {
     return;
   }
 
-  mostrarMensaje(`Venta #${data.venta_id} registrada. Total: ${moneyCL(data.total)}` +
-    (data.cambio != null ? ` — Cambio: ${moneyCL(data.cambio)}` : ''), 'success');
-
-  venta.length = 0;
-  renderVenta();
-  pagadoConEl.value = '';
-  escanearInput.focus();
-  window.open(`/ventas/${data.venta_id}/ticket`, '_blank');
+  volverAlInicio();
 });
 
 function mostrarMensaje(msg, tipo) {

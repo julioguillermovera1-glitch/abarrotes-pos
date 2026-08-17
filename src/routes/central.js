@@ -32,6 +32,15 @@ router.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
+// --- Desconecta todos los locales del panel (para dejarlo en blanco antes de
+// entregar un local/instalador nuevo, sin datos de prueba pegados). ---
+router.post('/api/limpiar-locales', requireCentralLogin, async (req, res) => {
+  await pool.query('DELETE FROM local_status');
+  await pool.query('DELETE FROM local_credentials');
+  await pool.query('DELETE FROM pairing_codes');
+  res.redirect('/dashboard');
+});
+
 // --- Panel central: resumen de todos los locales ---
 router.get('/dashboard', requireCentralLogin, async (req, res) => {
   const [locales] = await pool.query('SELECT * FROM local_status ORDER BY local_nombre');

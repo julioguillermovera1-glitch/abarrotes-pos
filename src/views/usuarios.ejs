@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Usuarios — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'usuarios' }) %>
+
+  <main class="content">
+    <div class="content-header">
+      <h1>Usuarios (vendedores)</h1>
+      <button class="btn btn-primary" onclick="document.getElementById('modalNuevo').style.display='flex'">+ Nuevo usuario</button>
+    </div>
+
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <% if (nuevaClave) { %>
+      <div class="alert alert-success">
+        Contraseña para <strong><%= nuevaClave.nombre %></strong> (usuario "<%= nuevaClave.usuario %>"):
+        <strong style="font-size:1.2rem; letter-spacing:0.05rem"><%= nuevaClave.password %></strong>
+        — apúntala o entrégasela ahora, no se volverá a mostrar.
+      </div>
+    <% } %>
+
+    <p style="color:#888; font-size:0.9rem; max-width:600px">
+      Cada vendedora debe entrar con su propio usuario. Así cada venta y movimiento de inventario queda
+      registrado a nombre de quien lo hizo, sin confusiones entre turnos. Las contraseñas no quedan
+      guardadas en texto plano en ningún lado — si una vendedora la olvida, usa "Restablecer" para darle una nueva.
+    </p>
+
+    <table class="tabla-datos">
+      <thead>
+        <tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% usuarios.forEach(u => { %>
+          <tr>
+            <td><%= u.nombre %></td>
+            <td><%= u.usuario %></td>
+            <td><%= u.rol === 'admin' ? 'Administrador' : 'Vendedora/Cajera' %></td>
+            <td><%= u.activo ? 'Activo' : 'Inactivo' %></td>
+            <td class="acciones">
+              <button class="btn-mini" onclick="abrirEditar(<%= u.id %>, '<%= u.nombre.replace(/'/g, "\\'") %>', '<%= u.rol %>')">Editar</button>
+              <form method="POST" action="/usuarios/<%= u.id %>/restablecer" style="display:inline" onsubmit="return confirm('¿Generar una contraseña nueva para <%= u.nombre.replace(/'/g, "\\'") %>? La anterior dejará de funcionar.')">
+                <button type="submit" class="btn-mini">Restablecer contraseña</button>
+              </form>
+              <form method="POST" action="/usuarios/<%= u.id %>/desactivar" style="display:inline">
+                <button type="submit" class="btn-mini btn-danger"><%= u.activo ? 'Desactivar' : 'Activar' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+
+  <!-- Modal nuevo usuario -->
+  <div id="modalNuevo" class="modal">
+    <div class="modal-contenido">
+      <h2>Nuevo usuario</h2>
+      <form method="POST" action="/usuarios">
+        <label>Nombre</label>
+        <input type="text" name="nombre" placeholder="Ej: María González" required>
+        <label>Usuario (para iniciar sesión)</label>
+        <input type="text" name="usuario" placeholder="Ej: maria" required>
+        <label>Contraseña (déjalo en blanco para que se genere una sola)</label>
+        <input type="password" name="password" placeholder="Automática">
+        <label>Rol</label>
+        <select name="rol">
+          <option value="cajero">Vendedora/Cajera</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal editar usuario -->
+  <div id="modalEditar" class="modal">
+    <div class="modal-contenido">
+      <h2>Editar usuario</h2>
+      <form method="POST" id="formEditar">
+        <label>Nombre</label>
+        <input type="text" name="nombre" id="editarNombre" required>
+        <label>Rol</label>
+        <select name="rol" id="editarRol">
+          <option value="cajero">Vendedora/Cajera</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <p style="font-size:0.82rem; color:#888; margin:0.4rem 0 0">Para cambiar la contraseña, usa el botón "Restablecer contraseña".</p>
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalEditar').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirEditar(id, nombre, rol) {
+      document.getElementById('formEditar').action = `/usuarios/${id}/editar`;
+      document.getElementById('editarNombre').value = nombre;
+      document.getElementById('editarRol').value = rol;
+      document.getElementById('modalEditar').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>

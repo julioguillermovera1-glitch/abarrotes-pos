@@ -38,6 +38,8 @@ if (APP_MODE === 'central') {
   const proveedoresRoutes = require('./routes/proveedores');
   const reportesRoutes = require('./routes/reportes');
   const setupRoutes = require('./routes/setup');
+  const usuariosRoutes = require('./routes/usuarios');
+  const { router: cajaRoutes } = require('./routes/caja');
 
   app.get('/', (req, res) => res.redirect('/ventas'));
   app.use(authRoutes);
@@ -47,6 +49,8 @@ if (APP_MODE === 'central') {
   app.use(proveedoresRoutes);
   app.use(reportesRoutes);
   app.use(setupRoutes);
+  app.use(usuariosRoutes);
+  app.use(cajaRoutes);
 
   require('./services/sync').start();
 }

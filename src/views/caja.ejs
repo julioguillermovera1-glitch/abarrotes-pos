@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Caja — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'caja' }) %>
+
+  <main class="content" style="max-width:640px">
+    <h1>Cuadratura de caja</h1>
+
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <% if (!turno) { %>
+      <p style="color:#888">No hay ningún turno abierto. Antes de vender, abre la caja indicando cuánto dinero dejas para los vueltos.</p>
+      <form method="POST" action="/caja/abrir" class="modal-contenido" style="width:auto; padding:1.2rem">
+        <label>Monto que dejas en caja para los vueltos</label>
+        <input type="number" name="monto_apertura" step="1" min="0" value="0" required autofocus>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Abrir caja</button>
+      </form>
+    <% } else { %>
+      <div class="tarjetas-resumen">
+        <div class="tarjeta"><h3><%= moneyCL(turno.monto_apertura) %></h3><p>Dejado para vueltos</p></div>
+        <div class="tarjeta"><h3><%= moneyCL(ventasEfectivoTurno) %></h3><p>Ventas en efectivo</p></div>
+        <div class="tarjeta"><h3><%= moneyCL(montoEsperado) %></h3><p>Debería haber en caja</p></div>
+      </div>
+      <p style="color:#888; font-size:0.9rem">
+        Turno abierto por <strong><%= turno.usuario_nombre %></strong> a las <%= new Date(turno.abierto_en).toLocaleString('es-CL') %>.
+      </p>
+
+      <h2 style="margin-top:1.5rem">Cerrar caja / cambio de turno</h2>
+      <p style="color:#888">Cuenta el dinero físico en caja y anótalo aquí. Si entra otra vendedora, que cuente ella misma antes de firmar.</p>
+      <form method="POST" action="/caja/cerrar" class="modal-contenido" style="width:auto; padding:1.2rem">
+        <label>Monto contado en caja (todo el efectivo)</label>
+        <input type="number" name="monto_cierre" step="1" min="0" required autofocus>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Cerrar caja</button>
+      </form>
+    <% } %>
+
+    <h2 style="margin-top:2rem">Historial de turnos</h2>
+    <table class="tabla-datos">
+      <thead>
+        <tr><th>Vendedor</th><th>Apertura</th><th>Cierre</th><th>Debería haber</th><th>Contado</th><th>Diferencia</th></tr>
+      </thead>
+      <tbody>
+        <% historial.forEach(t => { %>
+          <tr class="<%= Number(t.diferencia) !== 0 ? 'fila-alerta' : '' %>">
+            <td><%= t.usuario_nombre %></td>
+            <td><%= new Date(t.abierto_en).toLocaleString('es-CL') %></td>
+            <td><%= new Date(t.cerrado_en).toLocaleString('es-CL') %></td>
+            <td><%= moneyCL(t.monto_esperado) %></td>
+            <td><%= moneyCL(t.monto_cierre) %></td>
+            <td>
+              <% if (Number(t.diferencia) > 0) { %>+<%= moneyCL(t.diferencia) %>
+              <% } else if (Number(t.diferencia) < 0) { %>-<%= moneyCL(Math.abs(t.diferencia)) %>
+              <% } else { %><%= moneyCL(0) %><% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (historial.length === 0) { %><tr><td colspan="6">Todavía no hay turnos cerrados</td></tr><% } %>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

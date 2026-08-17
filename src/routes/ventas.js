@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { requireLogin } = require('../middleware/auth');
 const { abrirCaja } = require('../services/cajaRegistradora');
+const { turnoAbierto } = require('./caja');
 
 const router = express.Router();
 
@@ -9,19 +10,39 @@ router.get('/ventas', requireLogin, async (req, res) => {
   const [clientes] = await pool.query(
     'SELECT id, nombre FROM clientes WHERE activo = 1 ORDER BY nombre'
   );
-  const [categorias] = await pool.query('SELECT * FROM categorias ORDER BY nombre');
-  const [productos] = await pool.query(
-    `SELECT id, codigo_barra, nombre, precio_venta, existencia, categoria_id
-     FROM productos WHERE activo = 1 ORDER BY nombre`
+
+  const [ventasHoy] = await pool.query(
+    `SELECT v.id, v.total, v.tipo_pago, v.creado_en, c.nombre AS cliente_nombre, u.nombre AS usuario_nombre
+     FROM ventas v LEFT JOIN clientes c ON c.id = v.cliente_id LEFT JOIN usuarios u ON u.id = v.usuario_id
+     WHERE v.estado='completada' AND DATE(v.creado_en) = CURDATE()
+     ORDER BY v.creado_en DESC`
   );
-  res.render('ventas', { usuario: req.session.usuario, clientes, categorias, productos });
+  const [[resumenHoy]] = await pool.query(
+    `SELECT COUNT(*) AS num_ventas, COALESCE(SUM(total),0) AS total_hoy
+     FROM ventas WHERE estado='completada' AND DATE(creado_en) = CURDATE()`
+  );
+  const [masVendidosHoy] = await pool.query(
+    `SELECT p.nombre, p.tipo_venta, SUM(vd.cantidad) AS cantidad, SUM(vd.subtotal) AS total
+     FROM venta_detalle vd
+     JOIN ventas v ON v.id = vd.venta_id
+     JOIN productos p ON p.id = vd.producto_id
+     WHERE v.estado='completada' AND DATE(v.creado_en) = CURDATE()
+     GROUP BY p.id ORDER BY total DESC LIMIT 10`
+  );
+
+  const turno = await turnoAbierto();
+
+  res.render('ventas', {
+    usuario: req.session.usuario, clientes,
+    ventasHoy, resumenHoy, masVendidosHoy, turno
+  });
 });
 
 // Búsqueda de productos para el POS (por nombre o código de barra, coincidencia parcial)
 router.get('/api/productos/buscar', requireLogin, async (req, res) => {
   const q = `%${req.query.q || ''}%`;
   const [rows] = await pool.query(
-    `SELECT id, codigo_barra, nombre, precio_venta, existencia
+    `SELECT id, codigo_barra, nombre, precio_venta, tipo_venta, existencia
      FROM productos
      WHERE activo = 1 AND (nombre LIKE ? OR codigo_barra LIKE ?)
      ORDER BY nombre LIMIT 20`,
@@ -33,7 +54,7 @@ router.get('/api/productos/buscar', requireLogin, async (req, res) => {
 // Búsqueda exacta por código de barra (para lectora/escáner: escanear + Enter = agregar)
 router.get('/api/productos/codigo/:codigo', requireLogin, async (req, res) => {
   const [[producto]] = await pool.query(
-    `SELECT id, codigo_barra, nombre, precio_venta, existencia
+    `SELECT id, codigo_barra, nombre, precio_venta, tipo_venta, existencia
      FROM productos WHERE activo = 1 AND codigo_barra = ? LIMIT 1`,
     [req.params.codigo]
   );
@@ -52,6 +73,11 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
     return res.status(400).json({ error: 'Selecciona un cliente para venta a crédito' });
   }
 
+  const turno = await turnoAbierto();
+  if (!turno) {
+    return res.status(400).json({ error: 'No hay una caja abierta. Ve a "Caja" para abrir el turno antes de vender.' });
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -60,14 +86,19 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
     const detalles = [];
     for (const item of items) {
       const [[producto]] = await conn.query(
-        'SELECT id, precio_venta, existencia, nombre FROM productos WHERE id = ? FOR UPDATE',
+        'SELECT id, precio_venta, tipo_venta, existencia, nombre FROM productos WHERE id = ? FOR UPDATE',
         [item.producto_id]
       );
       if (!producto) throw new Error(`Producto ${item.producto_id} no encontrado`);
       if (producto.existencia < item.cantidad) {
-        throw new Error(`Existencia insuficiente de "${producto.nombre}" (disponible: ${producto.existencia})`);
+        const disponible = producto.tipo_venta === 'peso'
+          ? `${(producto.existencia / 1000).toLocaleString('es-CL')} kg` : producto.existencia;
+        throw new Error(`Existencia insuficiente de "${producto.nombre}" (disponible: ${disponible})`);
       }
-      const subtotal = Number(producto.precio_venta) * item.cantidad;
+      // Para productos "por peso", precio_venta es por kilo y cantidad viene en gramos.
+      const subtotal = producto.tipo_venta === 'peso'
+        ? (Number(producto.precio_venta) / 1000) * item.cantidad
+        : Number(producto.precio_venta) * item.cantidad;
       total += subtotal;
       detalles.push({
         producto_id: producto.id,
@@ -97,9 +128,9 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
     }
 
     const [ventaResult] = await conn.query(
-      `INSERT INTO ventas (cliente_id, usuario_id, tipo_pago, total, pagado_con, cambio, estado)
-       VALUES (?, ?, ?, ?, ?, ?, 'completada')`,
-      [cliente_id || null, req.session.usuario.id, tipo_pago, total, pagado_con || null, cambio]
+      `INSERT INTO ventas (cliente_id, usuario_id, turno_id, tipo_pago, total, pagado_con, cambio, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'completada')`,
+      [cliente_id || null, req.session.usuario.id, turno.id, tipo_pago, total, pagado_con || null, cambio]
     );
     const ventaId = ventaResult.insertId;
 
@@ -144,7 +175,7 @@ router.get('/ventas/:id/ticket', requireLogin, async (req, res) => {
   );
   if (!venta) return res.status(404).send('Venta no encontrada');
   const [detalle] = await pool.query(
-    `SELECT vd.*, p.nombre AS producto_nombre
+    `SELECT vd.*, p.nombre AS producto_nombre, p.tipo_venta
      FROM venta_detalle vd JOIN productos p ON p.id = vd.producto_id
      WHERE vd.venta_id = ?`,
     [req.params.id]
