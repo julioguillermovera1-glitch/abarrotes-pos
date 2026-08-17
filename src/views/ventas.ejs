@@ -9,13 +9,34 @@
   <%- include('partials/nav', { active: 'ventas' }) %>
 
   <main class="pos-layout">
-    <section class="pos-scan-bar">
-      <input type="text" id="escanearProducto" placeholder="Escanea o escribe el código de barra y presiona Enter..." autofocus autocomplete="off">
-      <div id="resultados" class="resultados-lista"></div>
-      <div id="mensajeEscaneo" class="alert" style="display:none"></div>
+    <section class="pos-productos">
+      <div class="pos-scan-bar">
+        <input type="text" id="escanearProducto" placeholder="Escanea o escribe el código de barra, o toca un producto abajo..." autofocus autocomplete="off">
+        <div id="resultados" class="resultados-lista"></div>
+        <div id="mensajeEscaneo" class="alert" style="display:none"></div>
+      </div>
+
+      <div class="categorias-tabs" id="categoriasTabs">
+        <button class="categoria-tab active" data-cat="todas">Todas</button>
+        <% categorias.forEach(c => { %>
+          <button class="categoria-tab" data-cat="<%= c.id %>"><%= c.nombre %></button>
+        <% }) %>
+      </div>
+
+      <div class="productos-grid" id="productosGrid">
+        <% productos.forEach(p => { %>
+          <button class="producto-btn <%= p.existencia < 1 ? 'sin-stock' : '' %>"
+                  data-cat="<%= p.categoria_id || '' %>"
+                  data-producto='<%- JSON.stringify({id: p.id, codigo_barra: p.codigo_barra, nombre: p.nombre, precio_venta: p.precio_venta, existencia: p.existencia}) %>'>
+            <span class="producto-btn-nombre"><%= p.nombre %></span>
+            <span class="producto-btn-precio"><%= moneyCL(p.precio_venta) %></span>
+            <span class="producto-btn-stock"><%= p.existencia < 1 ? 'Sin stock' : 'Stock: ' + p.existencia %></span>
+          </button>
+        <% }) %>
+      </div>
     </section>
 
-    <section class="pos-venta-full">
+    <aside class="pos-venta-full">
       <div class="venta-header">
         <h2>Venta actual</h2>
         <div class="total-box">Total: <span id="totalVenta">$0</span></div>
@@ -29,38 +50,38 @@
           <tbody id="ventaBody"></tbody>
         </table>
       </div>
-    </section>
 
-    <section class="pos-pago-bar">
-      <div class="pago-tipo">
-        <label><input type="radio" name="tipo_pago" value="efectivo" checked> Efectivo</label>
-        <label><input type="radio" name="tipo_pago" value="credito"> Crédito</label>
-      </div>
+      <section class="pos-pago-bar">
+        <div class="pago-tipo">
+          <label><input type="radio" name="tipo_pago" value="efectivo" checked> Efectivo</label>
+          <label><input type="radio" name="tipo_pago" value="credito"> Crédito</label>
+        </div>
 
-      <div id="clienteBox" class="pago-campo" style="display:none">
-        <label>Cliente</label>
-        <select id="clienteSelect">
-          <option value="">-- Selecciona --</option>
-          <% clientes.forEach(c => { %>
-            <option value="<%= c.id %>"><%= c.nombre %></option>
-          <% }) %>
-        </select>
-      </div>
+        <div id="clienteBox" class="pago-campo" style="display:none">
+          <label>Cliente</label>
+          <select id="clienteSelect">
+            <option value="">-- Selecciona --</option>
+            <% clientes.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.nombre %></option>
+            <% }) %>
+          </select>
+        </div>
 
-      <div id="efectivoBox" class="pago-campo">
-        <label>Pagado con</label>
-        <input type="number" id="pagadoCon" step="1" min="0">
-      </div>
+        <div id="efectivoBox" class="pago-campo">
+          <label>Pagado con</label>
+          <input type="number" id="pagadoCon" step="1" min="0">
+        </div>
 
-      <div class="pago-campo">
-        <label>Cambio</label>
-        <div class="cambio" id="cambioVenta">$0</div>
-      </div>
+        <div class="pago-campo">
+          <label>Cambio</label>
+          <div class="cambio" id="cambioVenta">$0</div>
+        </div>
 
-      <button id="btnCobrar" class="btn btn-primary btn-cobrar">Cobrar</button>
-    </section>
+        <button id="btnCobrar" class="btn btn-primary btn-cobrar">Cobrar</button>
+      </section>
 
-    <div id="mensajeVenta" class="alert pos-mensaje" style="display:none"></div>
+      <div id="mensajeVenta" class="alert pos-mensaje" style="display:none"></div>
+    </aside>
   </main>
 
   <script src="/js/ventas.js"></script>

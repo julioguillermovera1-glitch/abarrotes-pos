@@ -75,6 +75,26 @@ function renderResultados(productos) {
   });
 }
 
+// --- Cuadrícula de productos táctil: tocar/hacer clic agrega directo a la venta ---
+document.querySelectorAll('.producto-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const producto = JSON.parse(btn.dataset.producto);
+    agregarAVenta(producto);
+  });
+});
+
+document.querySelectorAll('.categoria-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.categoria-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const cat = tab.dataset.cat;
+    document.querySelectorAll('.producto-btn').forEach(btn => {
+      const coincide = cat === 'todas' || btn.dataset.cat === cat;
+      btn.style.display = coincide ? '' : 'none';
+    });
+  });
+});
+
 function agregarAVenta(producto) {
   mensajeEscaneo.style.display = 'none';
   const existente = venta.find(i => i.producto_id === producto.id);

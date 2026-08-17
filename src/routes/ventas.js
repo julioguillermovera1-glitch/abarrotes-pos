@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireLogin } = require('../middleware/auth');
+const { abrirCaja } = require('../services/cajaRegistradora');
 
 const router = express.Router();
 
@@ -8,7 +9,12 @@ router.get('/ventas', requireLogin, async (req, res) => {
   const [clientes] = await pool.query(
     'SELECT id, nombre FROM clientes WHERE activo = 1 ORDER BY nombre'
   );
-  res.render('ventas', { usuario: req.session.usuario, clientes });
+  const [categorias] = await pool.query('SELECT * FROM categorias ORDER BY nombre');
+  const [productos] = await pool.query(
+    `SELECT id, codigo_barra, nombre, precio_venta, existencia, categoria_id
+     FROM productos WHERE activo = 1 ORDER BY nombre`
+  );
+  res.render('ventas', { usuario: req.session.usuario, clientes, categorias, productos });
 });
 
 // Búsqueda de productos para el POS (por nombre o código de barra, coincidencia parcial)
@@ -116,6 +122,7 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
     }
 
     await conn.commit();
+    if (tipo_pago === 'efectivo') abrirCaja();
     res.json({ ok: true, venta_id: ventaId, total, cambio });
   } catch (err) {
     await conn.rollback();

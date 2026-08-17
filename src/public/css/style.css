@@ -61,19 +61,23 @@ body {
 .content { padding: 1.5rem 2rem; }
 .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 
-/* POS — la "Venta actual" ocupa toda la pantalla; el escaneo es una barra angosta arriba */
+/* POS — cuadrícula de productos táctil a la izquierda, venta + cobro a la derecha */
 html, body.pos-body { height: 100%; }
 body.pos-body { display: flex; flex-direction: column; overflow: hidden; }
 body.pos-body .navbar { flex: none; }
 
 .pos-layout {
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: row;
   flex: 1; min-height: 0;
-  padding: 1.2rem 1.5rem;
-  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  gap: 1rem;
 }
 
-/* Barra de escaneo: angosta, arriba, con los resultados de búsqueda flotando debajo */
+.pos-productos {
+  flex: 1.5; min-width: 0; display: flex; flex-direction: column; min-height: 0; gap: 0.7rem;
+}
+
+/* Barra de escaneo: con los resultados de búsqueda flotando debajo */
 .pos-scan-bar { position: relative; flex: none; }
 .pos-scan-bar input {
   width: 100%; padding: 0.9rem 1rem; font-size: 1.15rem; border: 2px solid #1b3a57; border-radius: 8px;
@@ -90,9 +94,38 @@ body.pos-body .navbar { flex: none; }
 .resultado-item .existencia { color: #888; font-size: 0.85rem; }
 .resultado-vacio { padding: 0.6rem 1rem; color: #888; background: white; border-radius: 6px; }
 
-/* La venta actual: ocupa todo el ancho y el espacio vertical restante */
+/* Pestañas de categoría */
+.categorias-tabs { flex: none; display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.2rem; }
+.categoria-tab {
+  flex: none; padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #ccc;
+  background: white; cursor: pointer; font-size: 0.9rem; white-space: nowrap;
+}
+.categoria-tab.active { background: #1b3a57; color: white; border-color: #1b3a57; }
+
+/* Cuadrícula de productos: botones grandes, pensados para dedo o mouse */
+.productos-grid {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem;
+  align-content: start;
+}
+.producto-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
+  background: white; border: 1px solid #e0e4e8; border-radius: 10px;
+  padding: 0.9rem; min-height: 90px; cursor: pointer; text-align: left;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.05s, box-shadow 0.1s;
+}
+.producto-btn:hover { border-color: #1b3a57; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.producto-btn:active { transform: scale(0.97); background: #f0f4f8; }
+.producto-btn.sin-stock { opacity: 0.45; cursor: not-allowed; }
+.producto-btn-nombre { font-weight: 600; font-size: 0.95rem; line-height: 1.25; }
+.producto-btn-precio { font-size: 1.1rem; font-weight: bold; color: #1b3a57; }
+.producto-btn-stock { font-size: 0.75rem; color: #888; }
+
+/* La venta actual: barra lateral fija a la derecha, con el cobro debajo */
 .pos-venta-full {
-  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  flex: 1; max-width: 420px; min-width: 320px;
+  min-height: 0; display: flex; flex-direction: column;
   background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   padding: 1rem 1.2rem;
 }
@@ -107,19 +140,23 @@ body.pos-body .navbar { flex: none; }
 .producto-nombre { font-weight: 500; white-space: normal; }
 .producto-codigo { color: #888; font-size: 0.78rem; font-family: 'Courier New', monospace; white-space: nowrap; }
 
-/* Barra de pago: abajo, ancho completo */
+/* Barra de pago: apilada debajo de la venta, dentro de la misma barra lateral */
 .pos-pago-bar {
-  flex: none; display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap;
-  background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  padding: 1rem 1.2rem;
+  flex: none; display: flex; flex-direction: column; gap: 0.7rem;
+  border-top: 1px solid #eee; margin-top: 0.7rem; padding-top: 0.8rem;
 }
 .pago-tipo { display: flex; gap: 1.2rem; align-items: center; }
 .pago-campo { display: flex; flex-direction: column; gap: 0.3rem; }
 .pago-campo label { font-size: 0.85rem; color: #555; }
-.pago-campo input, .pago-campo select { padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; min-width: 140px; }
-.pago-campo .cambio { font-size: 1.1rem; font-weight: bold; padding: 0.5rem 0; }
-.btn-cobrar { margin-left: auto; padding: 0.8rem 2.5rem; font-size: 1.1rem; }
-.pos-mensaje { flex: none; margin: 0; }
+.pago-campo input, .pago-campo select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; }
+.pago-campo .cambio { font-size: 1.1rem; font-weight: bold; padding: 0.3rem 0; }
+.btn-cobrar { width: 100%; padding: 0.9rem; font-size: 1.15rem; }
+.pos-mensaje { flex: none; margin: 0.6rem 0 0; }
+
+@media (max-width: 900px) {
+  .pos-layout { flex-direction: column; }
+  .pos-venta-full { max-width: none; }
+}
 
 /* Tablas de datos */
 .tabla-datos { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
