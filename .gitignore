@@ -4,3 +4,4 @@ uploads/
 *.log
 sync-config.json
 backups/
+dist/
