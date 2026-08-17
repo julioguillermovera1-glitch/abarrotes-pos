@@ -1,16 +1,20 @@
 CÓMO INSTALAR ABARROTES POS EN UN LOCAL NUEVO
 ================================================
 
-1. Copia toda esta carpeta (AbarrotesPOS) al computador del local nuevo.
-   Puede ser por USB, o descargando el proyecto desde GitHub.
+FORMA FÁCIL (recomendada) — un solo archivo
+--------------------------------------------
+1. Copia el archivo "Instalar.bat" al computador del local nuevo
+   (por USB, WhatsApp, correo, como sea — es un archivo chico).
+   No hace falta copiar nada más, este archivo descarga todo el resto solo.
 
 2. Haz doble clic en "Instalar.bat".
 
 3. Windows va a pedir confirmación para correr como Administrador —
    acepta (es necesario para instalar el programa y la base de datos).
 
-4. Espera a que termine (puede tardar varios minutos la primera vez,
-   porque descarga e instala Node.js y MariaDB si no los tienes).
+4. El computador necesita internet en este paso: descarga el programa
+   desde GitHub, y si faltan, instala Node.js y MariaDB. Puede tardar
+   varios minutos la primera vez.
 
 5. Al final se abre el navegador solo, en la pantalla de inicio de sesión.
    Usuario: admin
@@ -19,11 +23,21 @@ CÓMO INSTALAR ABARROTES POS EN UN LOCAL NUEVO
 6. IMPORTANTE: cambia esa contraseña apenas entres, en el menú
    "Usuarios" → botón "Restablecer contraseña".
 
+FORMA ALTERNATIVA — sin depender de GitHub en el momento
+----------------------------------------------------------
+Si prefieres copiar el programa completo por USB (por ejemplo, sin
+buena conexión a internet en ese momento):
+1. Copia toda la carpeta "AbarrotesPOS" al computador nuevo.
+2. Haz doble clic en "Instalar.bat" que está DENTRO de esa carpeta
+   — al estar ya la carpeta ahí, no descarga el programa de nuevo,
+   sigue directo con la instalación de Node.js/MariaDB y el resto.
+   (Node.js y MariaDB sí se siguen descargando por internet en este paso.)
+
 Después de instalado:
 - El programa se abre solo cada vez que se prende el computador.
 - Todas las noches a las 23:30 se hace un respaldo automático de la
-  base de datos (queda guardado en la carpeta "backups" dentro de esta
-  misma carpeta).
+  base de datos (queda guardado en la carpeta "backups" dentro de la
+  carpeta AbarrotesPOS).
 - Queda un acceso directo "Abarrotes POS" en el escritorio para abrir
   el programa cuando quieras (http://localhost:4001).
 
