@@ -19,3 +19,23 @@ CREATE TABLE IF NOT EXISTS central_admins (
   usuario VARCHAR(50) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL
 );
+
+-- Códigos de emparejamiento de un solo uso, estilo "agregar cámara" de Dahua:
+-- el panel genera un código corto + QR, el local nuevo lo canjea una vez.
+CREATE TABLE IF NOT EXISTS pairing_codes (
+  code VARCHAR(10) PRIMARY KEY,
+  local_nombre_sugerido VARCHAR(150) NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expira_en TIMESTAMP NOT NULL,
+  usado TINYINT(1) NOT NULL DEFAULT 0,
+  local_id VARCHAR(50),
+  sync_secret VARCHAR(64)
+);
+
+-- Credenciales por local, entregadas al canjear un código de emparejamiento.
+CREATE TABLE IF NOT EXISTS local_credentials (
+  local_id VARCHAR(50) PRIMARY KEY,
+  secret VARCHAR(64) NOT NULL,
+  local_nombre VARCHAR(150) NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

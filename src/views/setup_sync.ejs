@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Conectar panel central — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'setup' }) %>
+
+  <main class="content" style="max-width:480px">
+    <h1>🔗 Conectar panel central</h1>
+
+    <% if (ok) { %><div class="alert alert-success"><%= ok %></div><% } %>
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <% if (conectado) { %>
+      <p>Este local ya está conectado al panel central como <strong><%= config.localNombre %></strong>.</p>
+      <p style="color:#888; font-size:0.9rem">Panel: <%= config.centralUrl %></p>
+      <p style="color:#888; font-size:0.9rem">Envía un resumen automático cada cierto tiempo. Si necesitas reconectar a otro panel, ingresa un nuevo código abajo.</p>
+    <% } else { %>
+      <p>Pide en el panel central un código para este local (botón "+ Agregar local nuevo"), y escríbelo aquí.</p>
+    <% } %>
+
+    <form method="POST" action="/setup-sync" class="modal-contenido" style="width:auto; margin:1rem 0 0; padding:1.2rem">
+      <label>Código del local</label>
+      <input type="text" name="codigo" placeholder="Ej: AB3XZ9" maxlength="10" style="text-transform:uppercase" required autofocus>
+
+      <label>URL del panel central</label>
+      <input type="text" name="central_url" value="<%= config.centralUrl || centralUrlDefault %>">
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Conectar</button>
+    </form>
+  </main>
+</body>
+</html>

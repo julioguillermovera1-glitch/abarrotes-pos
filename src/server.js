@@ -37,6 +37,7 @@ if (APP_MODE === 'central') {
   const clientesRoutes = require('./routes/clientes');
   const proveedoresRoutes = require('./routes/proveedores');
   const reportesRoutes = require('./routes/reportes');
+  const setupRoutes = require('./routes/setup');
 
   app.get('/', (req, res) => res.redirect('/ventas'));
   app.use(authRoutes);
@@ -45,10 +46,9 @@ if (APP_MODE === 'central') {
   app.use(clientesRoutes);
   app.use(proveedoresRoutes);
   app.use(reportesRoutes);
+  app.use(setupRoutes);
 
-  if (process.env.CENTRAL_SYNC_URL) {
-    require('./services/sync').start();
-  }
+  require('./services/sync').start();
 }
 
 app.use((req, res) => res.status(404).send('Página no encontrada'));

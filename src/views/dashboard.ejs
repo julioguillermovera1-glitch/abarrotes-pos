@@ -18,7 +18,10 @@
   </nav>
 
   <main class="content">
-    <h1>Resumen de todos los locales</h1>
+    <div class="content-header">
+      <h1>Resumen de todos los locales</h1>
+      <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
+    </div>
 
     <div class="tarjetas-resumen">
       <div class="tarjeta"><h3><%= locales.length %></h3><p>Locales conectados</p></div>
@@ -87,5 +90,52 @@
       <% }) %>
     </div>
   </main>
+
+  <div id="modalNuevoLocal" class="modal">
+    <div class="modal-contenido">
+      <h2>Agregar local nuevo</h2>
+
+      <div id="pasoNombre">
+        <label>Nombre del local</label>
+        <input type="text" id="nombreLocalNuevo" placeholder="Ej: Sucursal Talcahuano">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="cerrarModalLocal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="generarCodigo()">Generar código</button>
+        </div>
+      </div>
+
+      <div id="pasoCodigo" style="display:none; text-align:center">
+        <p>En el POS del local nuevo, entra a <strong>"Conectar panel central"</strong> e ingresa este código
+           (o escanea el QR si tienes lector). Vence en 30 minutos.</p>
+        <img id="qrCodigo" alt="Código QR" style="width:200px; height:200px; margin:0.5rem 0">
+        <div id="codigoTexto" style="font-size:2rem; font-weight:bold; letter-spacing:0.3rem; margin:0.5rem 0"></div>
+        <div class="modal-botones" style="justify-content:center">
+          <button type="button" class="btn btn-secondary" onclick="cerrarModalLocal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function generarCodigo() {
+      const nombre = document.getElementById('nombreLocalNuevo').value;
+      const res = await fetch('/api/generar-codigo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local_nombre: nombre })
+      });
+      const data = await res.json();
+      document.getElementById('pasoNombre').style.display = 'none';
+      document.getElementById('pasoCodigo').style.display = 'block';
+      document.getElementById('qrCodigo').src = data.qr;
+      document.getElementById('codigoTexto').textContent = data.code;
+    }
+    function cerrarModalLocal() {
+      document.getElementById('modalNuevoLocal').style.display = 'none';
+      document.getElementById('pasoNombre').style.display = 'block';
+      document.getElementById('pasoCodigo').style.display = 'none';
+      document.getElementById('nombreLocalNuevo').value = '';
+    }
+  </script>
 </body>
 </html>

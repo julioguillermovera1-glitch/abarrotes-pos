@@ -8,6 +8,7 @@
     <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
   </div>
   <div class="navbar-user">
+    <a href="/setup-sync" class="<%= typeof active !== 'undefined' && active === 'setup' ? 'active' : '' %>">🔗 Panel central</a>
     <span><%= usuario.nombre %></span>
     <form method="POST" action="/logout" style="display:inline">
       <button type="submit" class="link-button">Salir</button>

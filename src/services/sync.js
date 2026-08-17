@@ -1,12 +1,10 @@
 const pool = require('../db/pool');
+const { obtenerConfig } = require('./syncConfig');
 
-const LOCAL_ID = process.env.LOCAL_ID || 'local-1';
-const LOCAL_NOMBRE = process.env.LOCAL_NOMBRE || 'Local sin nombre';
-const CENTRAL_SYNC_URL = process.env.CENTRAL_SYNC_URL;
-const SYNC_SECRET = process.env.SYNC_SECRET;
 const INTERVAL_MIN = Number(process.env.SYNC_INTERVAL_MINUTES) || 20;
+let activo = false;
 
-async function construirResumen() {
+async function construirResumen(localId, localNombre) {
   const [[ventasHoy]] = await pool.query(
     `SELECT COUNT(*) AS ventas_hoy_count, COALESCE(SUM(total),0) AS ventas_hoy_total
      FROM ventas WHERE estado='completada' AND DATE(creado_en) = CURDATE()`
@@ -34,8 +32,8 @@ async function construirResumen() {
   const cuentasPorPagarTotal = cuentasPorPagar.reduce((s, c) => s + Number(c.saldo), 0);
 
   return {
-    local_id: LOCAL_ID,
-    local_nombre: LOCAL_NOMBRE,
+    local_id: localId,
+    local_nombre: localNombre,
     ventas_hoy_total: Number(ventasHoy.ventas_hoy_total),
     ventas_hoy_count: Number(ventasHoy.ventas_hoy_count),
     top_productos: topProductos.map(p => ({ nombre: p.nombre, cantidad: Number(p.cantidad) })),
@@ -46,11 +44,14 @@ async function construirResumen() {
 }
 
 async function sincronizar() {
+  const { localId, localNombre, centralUrl, syncSecret } = obtenerConfig();
+  if (!localId || !centralUrl || !syncSecret) return; // aún no emparejado
+
   try {
-    const resumen = await construirResumen();
-    const res = await fetch(`${CENTRAL_SYNC_URL.replace(/\/$/, '')}/api/sync`, {
+    const resumen = await construirResumen(localId, localNombre);
+    const res = await fetch(`${centralUrl.replace(/\/$/, '')}/api/sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_SECRET },
+      headers: { 'Content-Type': 'application/json', 'X-Sync-Key': syncSecret },
       body: JSON.stringify(resumen)
     });
     if (!res.ok) {
@@ -65,11 +66,14 @@ async function sincronizar() {
 }
 
 function start() {
-  if (!CENTRAL_SYNC_URL || !SYNC_SECRET) {
-    console.warn('Sync: CENTRAL_SYNC_URL o SYNC_SECRET no configurados, sincronización desactivada.');
+  if (activo) return;
+  const { localId, centralUrl, syncSecret } = obtenerConfig();
+  if (!localId || !centralUrl || !syncSecret) {
+    console.warn('Sync: este local todavía no está emparejado con un panel central (ver /setup-sync).');
     return;
   }
-  console.log(`Sync: activado hacia ${CENTRAL_SYNC_URL} cada ${INTERVAL_MIN} min (local: ${LOCAL_NOMBRE})`);
+  activo = true;
+  console.log(`Sync: activado hacia ${centralUrl} cada ${INTERVAL_MIN} min`);
   setTimeout(sincronizar, 10 * 1000);
   setInterval(sincronizar, INTERVAL_MIN * 60 * 1000);
 }

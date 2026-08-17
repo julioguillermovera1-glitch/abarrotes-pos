@@ -1,5 +1,7 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const QRCode = require('qrcode');
 const pool = require('../db/pool');
 
 const router = express.Router();
@@ -57,23 +59,81 @@ function safeParse(value, fallback) {
   try { return JSON.parse(value); } catch { return fallback; }
 }
 
+// --- Generar código de emparejamiento para un local nuevo (como agregar una cámara Dahua) ---
+router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
+  const nombre = (req.body.local_nombre || '').trim() || 'Nuevo local';
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
+  let code;
+  do {
+    code = Array.from({ length: 6 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('');
+    var [existe] = await pool.query('SELECT 1 FROM pairing_codes WHERE code = ?', [code]);
+  } while (existe.length > 0);
+
+  await pool.query(
+    `INSERT INTO pairing_codes (code, local_nombre_sugerido, expira_en)
+     VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))`,
+    [code, nombre]
+  );
+
+  const qrDataUrl = await QRCode.toDataURL(code, { width: 260, margin: 1 });
+  res.json({ code, qr: qrDataUrl, nombre });
+});
+
+// --- El local nuevo canjea el código y recibe sus credenciales ---
+router.post('/api/pair', async (req, res) => {
+  const codigo = (req.body.code || '').trim().toUpperCase();
+  if (!codigo) return res.status(400).json({ error: 'Falta el código' });
+
+  const [[pairing]] = await pool.query(
+    `SELECT * FROM pairing_codes WHERE code = ? AND usado = 0 AND expira_en > NOW()`,
+    [codigo]
+  );
+  if (!pairing) {
+    return res.status(400).json({ error: 'Código inválido, ya usado o vencido' });
+  }
+
+  const localId = 'local-' + crypto.randomBytes(6).toString('hex');
+  const secret = crypto.randomBytes(24).toString('hex');
+
+  await pool.query(
+    'INSERT INTO local_credentials (local_id, secret, local_nombre) VALUES (?, ?, ?)',
+    [localId, secret, pairing.local_nombre_sugerido]
+  );
+  await pool.query(
+    'UPDATE pairing_codes SET usado = 1, local_id = ?, sync_secret = ? WHERE code = ?',
+    [localId, secret, codigo]
+  );
+
+  res.json({
+    local_id: localId,
+    local_nombre: pairing.local_nombre_sugerido,
+    sync_secret: secret
+  });
+});
+
 // --- API de sincronización: cada local empuja aquí su resumen periódico ---
 router.post('/api/sync', async (req, res) => {
   const key = req.headers['x-sync-key'];
-  if (!key || key !== process.env.SYNC_SECRET) {
-    return res.status(401).json({ error: 'Clave de sincronización inválida' });
-  }
-
-  const {
-    local_id, local_nombre,
-    ventas_hoy_total, ventas_hoy_count,
-    top_productos, bajo_stock,
-    cuentas_por_pagar_total, cuentas_por_pagar
-  } = req.body;
+  const { local_id, local_nombre } = req.body;
 
   if (!local_id || !local_nombre) {
     return res.status(400).json({ error: 'Falta local_id o local_nombre' });
   }
+  if (!key) {
+    return res.status(401).json({ error: 'Falta clave de sincronización' });
+  }
+
+  const [[cred]] = await pool.query('SELECT secret FROM local_credentials WHERE local_id = ?', [local_id]);
+  const autorizado = cred ? key === cred.secret : key === process.env.SYNC_SECRET; // respaldo para configuración manual
+  if (!autorizado) {
+    return res.status(401).json({ error: 'Clave de sincronización inválida' });
+  }
+
+  const {
+    ventas_hoy_total, ventas_hoy_count,
+    top_productos, bajo_stock,
+    cuentas_por_pagar_total, cuentas_por_pagar
+  } = req.body;
 
   await pool.query(
     `INSERT INTO local_status
