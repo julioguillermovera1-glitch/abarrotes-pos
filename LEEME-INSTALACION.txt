@@ -1,0 +1,33 @@
+CÓMO INSTALAR ABARROTES POS EN UN LOCAL NUEVO
+================================================
+
+1. Copia toda esta carpeta (AbarrotesPOS) al computador del local nuevo.
+   Puede ser por USB, o descargando el proyecto desde GitHub.
+
+2. Haz doble clic en "Instalar.bat".
+
+3. Windows va a pedir confirmación para correr como Administrador —
+   acepta (es necesario para instalar el programa y la base de datos).
+
+4. Espera a que termine (puede tardar varios minutos la primera vez,
+   porque descarga e instala Node.js y MariaDB si no los tienes).
+
+5. Al final se abre el navegador solo, en la pantalla de inicio de sesión.
+   Usuario: admin
+   Contraseña: admin123
+
+6. IMPORTANTE: cambia esa contraseña apenas entres, en el menú
+   "Usuarios" → botón "Restablecer contraseña".
+
+Después de instalado:
+- El programa se abre solo cada vez que se prende el computador.
+- Todas las noches a las 23:30 se hace un respaldo automático de la
+  base de datos (queda guardado en la carpeta "backups" dentro de esta
+  misma carpeta).
+- Queda un acceso directo "Abarrotes POS" en el escritorio para abrir
+  el programa cuando quieras (http://localhost:4001).
+
+Si quieres conectar este local al panel central (para que el dueño vea
+las ventas de todas las tiendas), entra al programa y ve a
+"🔗 Panel central" en el menú, con el código que te dé el dueño desde
+su panel.

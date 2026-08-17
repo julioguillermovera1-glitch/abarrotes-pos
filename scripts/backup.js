@@ -5,9 +5,27 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const fs = require('fs');
 const { execFile } = require('child_process');
 
-const MYSQLDUMP_PATH = process.env.MYSQLDUMP_PATH || 'C:\\Program Files (x86)\\MariaDB 5.5\\bin\\mysqldump.exe';
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
 const DIAS_A_CONSERVAR = 30;
+
+// Busca mysqldump.exe en las ubicaciones típicas de instalación de MariaDB en
+// Windows, sin depender de una versión fija (para que siga funcionando después
+// de actualizar MariaDB).
+function ubicarMysqldump() {
+  if (process.env.MYSQLDUMP_PATH) return process.env.MYSQLDUMP_PATH;
+  const raices = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+  const candidatos = [];
+  for (const raiz of raices) {
+    if (!fs.existsSync(raiz)) continue;
+    for (const carpeta of fs.readdirSync(raiz)) {
+      if (!carpeta.toLowerCase().startsWith('mariadb')) continue;
+      const ruta = path.join(raiz, carpeta, 'bin', 'mysqldump.exe');
+      if (fs.existsSync(ruta)) candidatos.push(ruta);
+    }
+  }
+  candidatos.sort().reverse(); // la carpeta de versión más alta primero
+  return candidatos[0] || null;
+}
 
 function marcaDeTiempo() {
   const d = new Date();
@@ -18,8 +36,9 @@ function marcaDeTiempo() {
 function respaldar() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-  if (!fs.existsSync(MYSQLDUMP_PATH)) {
-    console.error(`No se encontró mysqldump en: ${MYSQLDUMP_PATH}`);
+  const mysqldumpPath = ubicarMysqldump();
+  if (!mysqldumpPath) {
+    console.error('No se encontró mysqldump.exe en ninguna instalación de MariaDB conocida.');
     console.error('Define la variable de entorno MYSQLDUMP_PATH si está en otra ubicación.');
     process.exit(1);
   }
@@ -35,7 +54,7 @@ function respaldar() {
 
   // La contraseña se pasa por variable de entorno (MYSQL_PWD) en vez de por
   // argumento, para que no quede visible en la lista de procesos de Windows.
-  const child = execFile(MYSQLDUMP_PATH, args, {
+  const child = execFile(mysqldumpPath, args, {
     env: { ...process.env, MYSQL_PWD: process.env.DB_PASSWORD },
     maxBuffer: 1024 * 1024 * 200
   }, (err) => {

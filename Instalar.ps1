@@ -1,0 +1,205 @@
+# Instalador de Abarrotes POS para un local nuevo.
+#
+# USO: copia toda esta carpeta (AbarrotesPOS) al computador del local nuevo,
+# luego abre PowerShell como Administrador dentro de esa carpeta y ejecuta:
+#
+#   powershell -ExecutionPolicy Bypass -File .\Instalar.ps1
+#
+# Deja instalado: Node.js, MariaDB, la base de datos vacía con un usuario
+# administrador (admin / admin123), el programa arrancando solo al prender
+# el computador, un respaldo automático diario, y un acceso directo en el
+# escritorio.
+
+$ErrorActionPreference = 'Stop'
+$AppDir = $PSScriptRoot
+
+function Requiere-Admin {
+  $esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  if (-not $esAdmin) {
+    Write-Host "Este instalador debe correrse como Administrador." -ForegroundColor Red
+    Write-Host "Cierra esta ventana, busca PowerShell, clic derecho -> 'Ejecutar como administrador', y vuelve a intentar." -ForegroundColor Red
+    exit 1
+  }
+}
+Requiere-Admin
+
+function Generar-Clave($largo = 24) {
+  -join ((48..57) + (65..90) + (97..122) | Get-Random -Count $largo | ForEach-Object {[char]$_})
+}
+
+Write-Host "=== Instalando Abarrotes POS ===" -ForegroundColor Cyan
+Write-Host "Carpeta del programa: $AppDir`n"
+
+# --- 1. Node.js ---
+Write-Host "=== 1. Node.js ===" -ForegroundColor Cyan
+$node = Get-Command node -ErrorAction SilentlyContinue
+if (-not $node) {
+  Write-Host "No está instalado. Instalando Node.js LTS..."
+  winget install --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements
+  # refrescar PATH de esta sesión sin tener que reabrir la ventana
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+} else {
+  Write-Host "Ya está instalado ($(node --version))."
+}
+$nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
+if (-not $nodeExe) { $nodeExe = "C:\Program Files\nodejs\node.exe" }
+if (-not (Test-Path $nodeExe)) {
+  Write-Host "No se pudo confirmar la instalación de Node.js. Cierra esta ventana, abre una nueva PowerShell como Administrador, y vuelve a correr el instalador." -ForegroundColor Red
+  exit 1
+}
+
+# --- 2. MariaDB ---
+Write-Host "`n=== 2. MariaDB ===" -ForegroundColor Cyan
+$servicioDB = Get-Service -Name MariaDB -ErrorAction SilentlyContinue
+$rootPassword = $null
+if (-not $servicioDB) {
+  Write-Host "No está instalado. Instalando MariaDB 11.4 LTS..."
+  $rootPassword = Generar-Clave 20
+  winget install --id MariaDB.Server --version 11.4.3.0 --silent --accept-package-agreements --accept-source-agreements `
+    --override "PASSWORD=$rootPassword SERVICENAME=MariaDB PORT=3306 /qn"
+  Start-Sleep -Seconds 10
+  $servicioDB = Get-Service -Name MariaDB -ErrorAction SilentlyContinue
+  if (-not $servicioDB) {
+    Write-Host "No se detectó el servicio MariaDB después de instalar. Revisa manualmente." -ForegroundColor Red
+    exit 1
+  }
+} else {
+  Write-Host "Ya está instalado."
+  if ($servicioDB.Status -ne 'Running') { Start-Service -Name MariaDB }
+  Write-Host "Este computador ya tiene MariaDB — si ya usaste este instalador antes en esta PC, la contraseña de root anterior sigue siendo válida."
+}
+
+$mysqlExe = (Get-ChildItem "C:\Program Files\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+if (-not $mysqlExe) {
+  $mysqlExe = (Get-ChildItem "C:\Program Files (x86)\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+}
+if (-not $mysqlExe) { Write-Host "No se encontró mysql.exe." -ForegroundColor Red; exit 1 }
+
+# --- 3. Base de datos y usuario de la aplicación ---
+Write-Host "`n=== 3. Creando la base de datos ===" -ForegroundColor Cyan
+$envPath = Join-Path $AppDir ".env"
+$appPassword = Generar-Clave 24
+
+if (Test-Path $envPath) {
+  Write-Host "Ya existe un archivo .env — se reutiliza la contraseña de la app que ya tenía."
+  $appPassword = (Get-Content $envPath | Select-String '^DB_PASSWORD=(.*)$').Matches.Groups[1].Value
+  if (-not $appPassword) { $appPassword = Generar-Clave 24 }
+}
+
+if (-not $rootPassword) {
+  Write-Host "Ingresa la contraseña de root de MariaDB de este computador (la que se generó la primera vez que se instaló):"
+  $rootPasswordSecure = Read-Host -AsSecureString
+  $rootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPasswordSecure))
+}
+
+$sqlSetup = @"
+CREATE DATABASE IF NOT EXISTS abarrotes_pos CHARACTER SET utf8mb4;
+CREATE USER IF NOT EXISTS 'abarrotes_app'@'localhost' IDENTIFIED BY '$appPassword';
+ALTER USER 'abarrotes_app'@'localhost' IDENTIFIED BY '$appPassword';
+GRANT ALL PRIVILEGES ON abarrotes_pos.* TO 'abarrotes_app'@'localhost';
+FLUSH PRIVILEGES;
+"@
+$sqlSetup | & $mysqlExe -u root "-p$rootPassword"
+Write-Host "Base de datos y usuario listos."
+
+Write-Host "Aplicando estructura de tablas..."
+Get-Content (Join-Path $AppDir "src\db\schema.sql") | & $mysqlExe -u root "-p$rootPassword"
+Write-Host "Estructura aplicada."
+
+# --- 4. Archivo .env ---
+Write-Host "`n=== 4. Configurando .env ===" -ForegroundColor Cyan
+$sessionSecret = Generar-Clave 40
+@"
+APP_MODE=local
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=abarrotes_app
+DB_PASSWORD=$appPassword
+DB_NAME=abarrotes_pos
+
+SESSION_SECRET=$sessionSecret
+
+PORT=4001
+"@ | Set-Content -Path $envPath -Encoding utf8
+Write-Host ".env creado."
+
+# --- 5. Dependencias de Node ---
+Write-Host "`n=== 5. Instalando dependencias (puede tardar unos minutos) ===" -ForegroundColor Cyan
+Push-Location $AppDir
+& "$($nodeExe | Split-Path)\npm.cmd" install --omit=dev
+Pop-Location
+
+# --- 6. Usuario administrador ---
+Write-Host "`n=== 6. Creando usuario administrador ===" -ForegroundColor Cyan
+$seedScript = @'
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const pool = require("./src/db/pool");
+(async () => {
+  const hash = bcrypt.hashSync("admin123", 10);
+  await pool.query(
+    `INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ('Administrador', 'admin', ?, 'admin')
+     ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)`,
+    [hash]
+  );
+  console.log("Usuario admin listo.");
+  process.exit(0);
+})().catch(e => { console.error(e); process.exit(1); });
+'@
+$seedPath = Join-Path $AppDir "_seed_temp.js"
+Set-Content -Path $seedPath -Value $seedScript -Encoding utf8
+Push-Location $AppDir
+& $nodeExe $seedPath
+Pop-Location
+Remove-Item $seedPath -Force
+
+# --- 7. Arranque automático al iniciar sesión ---
+Write-Host "`n=== 7. Configurando arranque automático ===" -ForegroundColor Cyan
+$tareaArranque = "AbarrotesPOS-Servidor"
+Unregister-ScheduledTask -TaskName $tareaArranque -Confirm:$false -ErrorAction SilentlyContinue
+$accionArranque = New-ScheduledTaskAction -Execute $nodeExe -Argument "`"$AppDir\src\server.js`"" -WorkingDirectory $AppDir
+$disparadorArranque = New-ScheduledTaskTrigger -AtLogOn
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+$configArranque = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -ExecutionTimeLimit 0
+Register-ScheduledTask -TaskName $tareaArranque -Action $accionArranque -Trigger $disparadorArranque -Principal $principal -Settings $configArranque -Description "Inicia Abarrotes POS al iniciar sesión" -Force | Out-Null
+Write-Host "Programado para iniciar solo la próxima vez que se inicie sesión en Windows."
+
+# --- 8. Respaldo automático diario ---
+Write-Host "`n=== 8. Configurando respaldo diario ===" -ForegroundColor Cyan
+$tareaBackup = "AbarrotesPOS-BackupDiario"
+Unregister-ScheduledTask -TaskName $tareaBackup -Confirm:$false -ErrorAction SilentlyContinue
+$accionBackup = New-ScheduledTaskAction -Execute $nodeExe -Argument "`"$AppDir\scripts\backup.js`"" -WorkingDirectory $AppDir
+$disparadorBackup = New-ScheduledTaskTrigger -Daily -At 23:30
+$configBackup = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd
+Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadorBackup -Settings $configBackup -Description "Respaldo diario de la base de datos de Abarrotes POS" -Force | Out-Null
+Write-Host "Respaldo programado todas las noches a las 23:30."
+
+# --- 9. Acceso directo en el escritorio ---
+# Un .lnk con una URL como destino no es confiable en Windows (espera un
+# programa/archivo, no una URL) — se usa un .url (acceso directo a internet),
+# que es el formato correcto para esto.
+Write-Host "`n=== 9. Creando acceso directo ===" -ForegroundColor Cyan
+$escritorio = [Environment]::GetFolderPath("Desktop")
+@"
+[InternetShortcut]
+URL=http://localhost:4001
+IconIndex=14
+IconFile=%SystemRoot%\System32\SHELL32.dll
+"@ | Set-Content -Path (Join-Path $escritorio "Abarrotes POS.url") -Encoding ascii
+Write-Host "Acceso directo creado en el escritorio."
+
+# --- 10. Arrancar ahora ---
+Write-Host "`n=== 10. Iniciando el programa ===" -ForegroundColor Cyan
+Start-Process $nodeExe -ArgumentList "`"$AppDir\src\server.js`"" -WorkingDirectory $AppDir -WindowStyle Hidden
+Start-Sleep -Seconds 3
+Start-Process "http://localhost:4001"
+
+Write-Host "`n=== Instalación terminada ===" -ForegroundColor Green
+Write-Host "Usuario: admin"
+Write-Host "Contraseña: admin123  (cámbiala apenas entres, en Usuarios -> Restablecer contraseña)"
+if ($rootPassword) {
+  Write-Host "Contraseña de root de MariaDB (guárdala aparte, casi nunca se necesita): $rootPassword"
+}
+Write-Host "El programa va a abrirse solo la próxima vez que se prenda este computador."
+Write-Host "Los respaldos quedan en: $AppDir\backups"
