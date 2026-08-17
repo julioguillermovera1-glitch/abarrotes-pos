@@ -1,0 +1,16 @@
+<nav class="navbar">
+  <div class="navbar-brand">🛒 Abarrotes POS</div>
+  <div class="navbar-links">
+    <a href="/ventas" class="<%= typeof active !== 'undefined' && active === 'ventas' ? 'active' : '' %>">Venta</a>
+    <a href="/inventario" class="<%= typeof active !== 'undefined' && active === 'inventario' ? 'active' : '' %>">Inventario</a>
+    <a href="/clientes" class="<%= typeof active !== 'undefined' && active === 'clientes' ? 'active' : '' %>">Clientes</a>
+    <a href="/proveedores" class="<%= typeof active !== 'undefined' && active === 'proveedores' ? 'active' : '' %>">Proveedores</a>
+    <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
+  </div>
+  <div class="navbar-user">
+    <span><%= usuario.nombre %></span>
+    <form method="POST" action="/logout" style="display:inline">
+      <button type="submit" class="link-button">Salir</button>
+    </form>
+  </div>
+</nav>

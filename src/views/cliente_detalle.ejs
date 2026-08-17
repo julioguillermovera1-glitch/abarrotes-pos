@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= cliente.nombre %> — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'clientes' }) %>
+
+  <main class="content">
+    <p><a href="/clientes">← Volver a clientes</a></p>
+    <h1><%= cliente.nombre %></h1>
+    <p>Teléfono: <%= cliente.telefono || '-' %> | Dirección: <%= cliente.direccion || '-' %></p>
+    <p>Límite de crédito: <%= moneyCL(cliente.limite_credito) %></p>
+    <p class="saldo-pendiente">Saldo pendiente: <%= moneyCL(cliente.saldo_pendiente) %></p>
+
+    <% if (cliente.saldo_pendiente > 0) { %>
+      <form method="POST" action="/clientes/<%= cliente.id %>/abono" class="form-inline">
+        <label>Registrar abono:</label>
+        <input type="number" step="1" name="monto" min="1" max="<%= cliente.saldo_pendiente %>" required>
+        <button type="submit" class="btn btn-primary">Abonar</button>
+      </form>
+    <% } %>
+
+    <h2>Historial de compras a crédito</h2>
+    <table class="tabla-datos">
+      <thead><tr><th>Venta</th><th>Fecha</th><th>Total</th></tr></thead>
+      <tbody>
+        <% ventas.forEach(v => { %>
+          <tr>
+            <td><a href="/ventas/<%= v.id %>/ticket" target="_blank">#<%= v.id %></a></td>
+            <td><%= new Date(v.creado_en).toLocaleString('es-CL') %></td>
+            <td><%= moneyCL(v.total) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <h2>Historial de abonos</h2>
+    <table class="tabla-datos">
+      <thead><tr><th>Fecha</th><th>Monto</th></tr></thead>
+      <tbody>
+        <% abonos.forEach(a => { %>
+          <tr>
+            <td><%= new Date(a.creado_en).toLocaleString('es-CL') %></td>
+            <td><%= moneyCL(a.monto) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

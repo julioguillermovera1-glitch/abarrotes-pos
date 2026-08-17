@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventario — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'inventario' }) %>
+
+  <main class="content">
+    <div class="content-header">
+      <h1>Inventario</h1>
+      <button class="btn btn-primary" onclick="document.getElementById('modalNuevo').style.display='flex'">+ Nuevo producto</button>
+    </div>
+
+    <details class="panel-categorias">
+      <summary>Categorías</summary>
+      <ul>
+        <% categorias.forEach(c => { %><li><%= c.nombre %></li><% }) %>
+      </ul>
+      <form method="POST" action="/inventario/categorias" class="form-inline">
+        <input type="text" name="nombre" placeholder="Nueva categoría" required>
+        <button type="submit" class="btn btn-secondary">Agregar</button>
+      </form>
+    </details>
+
+    <table class="tabla-datos">
+      <thead>
+        <tr>
+          <th>Código</th><th>Nombre</th><th>Categoría</th><th>Compra</th><th>Venta</th>
+          <th>Existencia</th><th>Mínimo</th><th>Estado</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% productos.forEach(p => { %>
+          <tr class="<%= p.existencia <= p.stock_minimo ? 'fila-alerta' : '' %>">
+            <td><%= p.codigo_barra || '-' %></td>
+            <td><%= p.nombre %></td>
+            <td><%= p.categoria_nombre || '-' %></td>
+            <td><%= moneyCL(p.precio_compra) %></td>
+            <td><%= moneyCL(p.precio_venta) %></td>
+            <td><%= p.existencia %></td>
+            <td><%= p.stock_minimo %></td>
+            <td><%= p.activo ? 'Activo' : 'Inactivo' %></td>
+            <td class="acciones">
+              <button class="btn-mini" onclick="abrirMovimiento(<%= p.id %>, '<%= p.nombre.replace(/'/g, "\\'") %>')">Ajustar</button>
+              <form method="POST" action="/inventario/productos/<%= p.id %>/desactivar" style="display:inline">
+                <button type="submit" class="btn-mini btn-danger"><%= p.activo ? 'Desactivar' : 'Activar' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+
+  <!-- Modal nuevo producto -->
+  <div id="modalNuevo" class="modal">
+    <div class="modal-contenido">
+      <h2>Nuevo producto</h2>
+      <form method="POST" action="/inventario/productos">
+        <label>Código de barra</label>
+        <input type="text" name="codigo_barra">
+        <label>Nombre</label>
+        <input type="text" name="nombre" required>
+        <label>Categoría</label>
+        <select name="categoria_id">
+          <option value="">-- Sin categoría --</option>
+          <% categorias.forEach(c => { %><option value="<%= c.id %>"><%= c.nombre %></option><% }) %>
+        </select>
+        <label>Precio de compra</label>
+        <input type="number" step="1" min="0" name="precio_compra" required>
+        <label>Precio de venta</label>
+        <input type="number" step="1" min="0" name="precio_venta" required>
+        <label>Existencia inicial</label>
+        <input type="number" name="existencia" value="0" required>
+        <label>Stock mínimo</label>
+        <input type="number" name="stock_minimo" value="0" required>
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal movimiento de inventario -->
+  <div id="modalMovimiento" class="modal">
+    <div class="modal-contenido">
+      <h2>Ajustar existencia: <span id="movProductoNombre"></span></h2>
+      <form method="POST" id="formMovimiento">
+        <label>Tipo</label>
+        <select name="tipo">
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="ajuste">Ajuste</option>
+        </select>
+        <label>Cantidad</label>
+        <input type="number" name="cantidad" min="1" required>
+        <label>Motivo</label>
+        <input type="text" name="motivo">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMovimiento').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirMovimiento(id, nombre) {
+      document.getElementById('movProductoNombre').textContent = nombre;
+      document.getElementById('formMovimiento').action = `/inventario/productos/${id}/movimiento`;
+      document.getElementById('modalMovimiento').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>

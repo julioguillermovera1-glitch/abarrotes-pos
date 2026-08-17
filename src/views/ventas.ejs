@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Venta — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="pos-body">
+  <%- include('partials/nav', { active: 'ventas' }) %>
+
+  <main class="pos-layout">
+    <section class="pos-scan-bar">
+      <input type="text" id="escanearProducto" placeholder="Escanea o escribe el código de barra y presiona Enter..." autofocus autocomplete="off">
+      <div id="resultados" class="resultados-lista"></div>
+      <div id="mensajeEscaneo" class="alert" style="display:none"></div>
+    </section>
+
+    <section class="pos-venta-full">
+      <div class="venta-header">
+        <h2>Venta actual</h2>
+        <div class="total-box">Total: <span id="totalVenta">$0</span></div>
+      </div>
+
+      <div class="tabla-carrito-wrapper">
+        <table class="tabla-carrito">
+          <thead>
+            <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr>
+          </thead>
+          <tbody id="ventaBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pos-pago-bar">
+      <div class="pago-tipo">
+        <label><input type="radio" name="tipo_pago" value="efectivo" checked> Efectivo</label>
+        <label><input type="radio" name="tipo_pago" value="credito"> Crédito</label>
+      </div>
+
+      <div id="clienteBox" class="pago-campo" style="display:none">
+        <label>Cliente</label>
+        <select id="clienteSelect">
+          <option value="">-- Selecciona --</option>
+          <% clientes.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div id="efectivoBox" class="pago-campo">
+        <label>Pagado con</label>
+        <input type="number" id="pagadoCon" step="1" min="0">
+      </div>
+
+      <div class="pago-campo">
+        <label>Cambio</label>
+        <div class="cambio" id="cambioVenta">$0</div>
+      </div>
+
+      <button id="btnCobrar" class="btn btn-primary btn-cobrar">Cobrar</button>
+    </section>
+
+    <div id="mensajeVenta" class="alert pos-mensaje" style="display:none"></div>
+  </main>
+
+  <script src="/js/ventas.js"></script>
+</body>
+</html>

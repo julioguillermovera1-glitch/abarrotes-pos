@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= proveedor.nombre %> — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'proveedores' }) %>
+
+  <main class="content">
+    <p><a href="/proveedores">← Volver a proveedores</a></p>
+    <h1><%= proveedor.nombre %></h1>
+    <p>Contacto: <%= proveedor.contacto || '-' %> | Teléfono: <%= proveedor.telefono || '-' %></p>
+
+    <% const saldoTotal = facturas.filter(f => f.estado === 'pendiente').reduce((s, f) => s + Number(f.saldo_pendiente), 0); %>
+    <p class="saldo-pendiente">Total por pagar: <%= moneyCL(saldoTotal) %></p>
+
+    <div class="content-header">
+      <h2>Facturas</h2>
+      <button class="btn btn-primary" onclick="document.getElementById('modalFactura').style.display='flex'">+ Registrar factura</button>
+    </div>
+
+    <table class="tabla-datos">
+      <thead>
+        <tr><th>Folio</th><th>Concepto</th><th>Fecha</th><th>Vence</th><th>Monto</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% facturas.forEach(f => { %>
+          <tr class="<%= f.estado === 'pendiente' ? 'fila-alerta' : '' %>">
+            <td><%= f.numero_factura || '-' %></td>
+            <td><%= f.concepto || '-' %></td>
+            <td><%= new Date(f.fecha_factura).toLocaleDateString('es-CL') %></td>
+            <td><%= f.fecha_vencimiento ? new Date(f.fecha_vencimiento).toLocaleDateString('es-CL') : '-' %></td>
+            <td><%= moneyCL(f.monto) %></td>
+            <td><%= moneyCL(f.saldo_pendiente) %></td>
+            <td><%= f.estado === 'pagada' ? '✅ Pagada' : '⏳ Pendiente' %></td>
+            <td>
+              <% if (f.estado === 'pendiente') { %>
+                <button class="btn-mini" onclick="abrirPago(<%= f.id %>, '<%= (f.numero_factura || ('Factura #' + f.id)).replace(/'/g, "\\'") %>', <%= f.saldo_pendiente %>)">Pagar</button>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <h2>Historial de pagos</h2>
+    <table class="tabla-datos">
+      <thead><tr><th>Fecha</th><th>Factura</th><th>Monto</th></tr></thead>
+      <tbody>
+        <% pagos.forEach(p => { %>
+          <tr>
+            <td><%= new Date(p.creado_en).toLocaleString('es-CL') %></td>
+            <td><%= p.factura_id ? ('#' + p.factura_id) : 'Pago general' %></td>
+            <td><%= moneyCL(p.monto) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+
+  <div id="modalFactura" class="modal">
+    <div class="modal-contenido">
+      <h2>Registrar factura</h2>
+      <form method="POST" action="/proveedores/<%= proveedor.id %>/facturas">
+        <label>Número de factura / folio</label>
+        <input type="text" name="numero_factura">
+        <label>Concepto</label>
+        <input type="text" name="concepto">
+        <label>Monto</label>
+        <input type="number" step="1" min="0" name="monto" required>
+        <label>Fecha de factura</label>
+        <input type="date" name="fecha_factura" required>
+        <label>Fecha de vencimiento</label>
+        <input type="date" name="fecha_vencimiento">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalFactura').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modalPago" class="modal">
+    <div class="modal-contenido">
+      <h2>Registrar pago: <span id="pagoFacturaNombre"></span></h2>
+      <form method="POST" id="formPago">
+        <input type="hidden" name="factura_id" id="pagoFacturaId">
+        <label>Monto a pagar</label>
+        <input type="number" step="1" name="monto" id="pagoMonto" required>
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalPago').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar pago</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirPago(facturaId, nombre, saldo) {
+      document.getElementById('pagoFacturaNombre').textContent = nombre;
+      document.getElementById('pagoFacturaId').value = facturaId;
+      document.getElementById('pagoMonto').value = saldo;
+      document.getElementById('pagoMonto').max = saldo;
+      document.getElementById('formPago').action = '/proveedores/<%= proveedor.id %>/pagos';
+      document.getElementById('modalPago').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>

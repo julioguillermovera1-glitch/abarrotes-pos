@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket #<%= venta.id %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="ticket-body">
+  <div class="ticket">
+    <h2>🛒 Abarrotes POS</h2>
+    <p>Ticket #<%= venta.id %></p>
+    <p><%= new Date(venta.creado_en).toLocaleString('es-CL') %></p>
+    <p>Atendió: <%= venta.usuario_nombre || '-' %></p>
+    <% if (venta.cliente_nombre) { %><p>Cliente: <%= venta.cliente_nombre %></p><% } %>
+    <hr>
+    <table class="ticket-tabla">
+      <% detalle.forEach(d => { %>
+        <tr>
+          <td><%= d.producto_nombre %> x<%= d.cantidad %></td>
+          <td><%= moneyCL(d.subtotal) %></td>
+        </tr>
+      <% }) %>
+    </table>
+    <hr>
+    <p class="ticket-total">Total: <%= moneyCL(venta.total) %></p>
+    <p>Pago: <%= venta.tipo_pago === 'credito' ? 'Crédito' : 'Efectivo' %></p>
+    <% if (venta.tipo_pago === 'efectivo') { %>
+      <p>Pagó con: <%= moneyCL(venta.pagado_con) %></p>
+      <p>Cambio: <%= moneyCL(venta.cambio) %></p>
+    <% } %>
+    <hr>
+    <p class="ticket-gracias">¡Gracias por su compra!</p>
+    <button onclick="window.print()" class="btn btn-primary no-print">Imprimir</button>
+  </div>
+</body>
+</html>

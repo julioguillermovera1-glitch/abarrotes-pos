@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Proveedores — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'proveedores' }) %>
+
+  <main class="content">
+    <div class="content-header">
+      <h1>Proveedores</h1>
+      <div style="display:flex; gap:0.6rem">
+        <a href="/proveedores/facturas/escanear" class="btn btn-primary">📷 Escanear factura</a>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='flex'">+ Nuevo proveedor</button>
+      </div>
+    </div>
+
+    <table class="tabla-datos">
+      <thead>
+        <tr><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Saldo por pagar</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% proveedores.forEach(p => { %>
+          <tr class="<%= p.saldo_total > 0 ? 'fila-alerta' : '' %>">
+            <td><a href="/proveedores/<%= p.id %>"><%= p.nombre %></a></td>
+            <td><%= p.contacto || '-' %></td>
+            <td><%= p.telefono || '-' %></td>
+            <td><%= moneyCL(p.saldo_total) %></td>
+            <td><%= p.activo ? 'Activo' : 'Inactivo' %></td>
+            <td class="acciones">
+              <a href="/proveedores/<%= p.id %>" class="btn-mini">Ver</a>
+              <form method="POST" action="/proveedores/<%= p.id %>/desactivar" style="display:inline">
+                <button type="submit" class="btn-mini btn-danger"><%= p.activo ? 'Desactivar' : 'Activar' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+
+  <div id="modalNuevo" class="modal">
+    <div class="modal-contenido">
+      <h2>Nuevo proveedor</h2>
+      <form method="POST" action="/proveedores">
+        <label>Nombre</label>
+        <input type="text" name="nombre" required>
+        <label>Contacto</label>
+        <input type="text" name="contacto">
+        <label>Teléfono</label>
+        <input type="text" name="telefono">
+        <label>Dirección</label>
+        <input type="text" name="direccion">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

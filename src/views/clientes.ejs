@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clientes — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'clientes' }) %>
+
+  <main class="content">
+    <div class="content-header">
+      <h1>Clientes</h1>
+      <button class="btn btn-primary" onclick="document.getElementById('modalNuevo').style.display='flex'">+ Nuevo cliente</button>
+    </div>
+
+    <table class="tabla-datos">
+      <thead>
+        <tr><th>Nombre</th><th>Teléfono</th><th>Límite crédito</th><th>Saldo pendiente</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% clientes.forEach(c => { %>
+          <tr class="<%= c.saldo_pendiente > 0 ? 'fila-alerta' : '' %>">
+            <td><a href="/clientes/<%= c.id %>"><%= c.nombre %></a></td>
+            <td><%= c.telefono || '-' %></td>
+            <td><%= moneyCL(c.limite_credito) %></td>
+            <td><%= moneyCL(c.saldo_pendiente) %></td>
+            <td><%= c.activo ? 'Activo' : 'Inactivo' %></td>
+            <td class="acciones">
+              <a href="/clientes/<%= c.id %>" class="btn-mini">Ver</a>
+              <form method="POST" action="/clientes/<%= c.id %>/desactivar" style="display:inline">
+                <button type="submit" class="btn-mini btn-danger"><%= c.activo ? 'Desactivar' : 'Activar' %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </main>
+
+  <div id="modalNuevo" class="modal">
+    <div class="modal-contenido">
+      <h2>Nuevo cliente</h2>
+      <form method="POST" action="/clientes">
+        <label>Nombre</label>
+        <input type="text" name="nombre" required>
+        <label>Teléfono</label>
+        <input type="text" name="telefono">
+        <label>Dirección</label>
+        <input type="text" name="direccion">
+        <label>Límite de crédito</label>
+        <input type="number" step="1" min="0" name="limite_credito" value="0">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalNuevo').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

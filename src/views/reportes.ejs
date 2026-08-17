@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reportes — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'reportes' }) %>
+
+  <main class="content">
+    <h1>Reportes</h1>
+
+    <form method="GET" action="/reportes" class="form-inline">
+      <label>Desde</label>
+      <input type="date" name="desde" value="<%= desde %>">
+      <label>Hasta</label>
+      <input type="date" name="hasta" value="<%= hasta %>">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+
+    <div class="tarjetas-resumen">
+      <div class="tarjeta"><h3><%= resumen.num_ventas %></h3><p>Ventas</p></div>
+      <div class="tarjeta"><h3><%= moneyCL(resumen.total_vendido) %></h3><p>Total vendido</p></div>
+      <div class="tarjeta"><h3><%= moneyCL(ganancia) %></h3><p>Ganancia estimada</p></div>
+    </div>
+
+    <div class="reportes-grid">
+      <div>
+        <h2>Ventas por día</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Fecha</th><th>Ventas</th><th>Total</th></tr></thead>
+          <tbody>
+            <% ventasPorDia.forEach(v => { %>
+              <tr><td><%= v.dia %></td><td><%= v.num_ventas %></td><td><%= moneyCL(v.total) %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Productos más vendidos</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Total</th></tr></thead>
+          <tbody>
+            <% masVendidos.forEach(p => { %>
+              <tr><td><%= p.nombre %></td><td><%= p.cantidad_vendida %></td><td><%= moneyCL(p.total) %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Créditos pendientes (clientes nos deben)</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Cliente</th><th>Saldo</th></tr></thead>
+          <tbody>
+            <% creditosPendientes.forEach(c => { %>
+              <tr><td><%= c.nombre %></td><td><%= moneyCL(c.saldo_pendiente) %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Cuentas por pagar (le debemos a proveedores)</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Proveedor</th><th>Saldo</th></tr></thead>
+          <tbody>
+            <% cuentasPorPagar.forEach(p => { %>
+              <tr><td><a href="/proveedores">Ver</a> <%= p.nombre %></td><td><%= moneyCL(p.saldo_pendiente) %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Bajo stock</h2>
+        <table class="tabla-datos">
+          <thead><tr><th>Producto</th><th>Existencia</th><th>Mínimo</th></tr></thead>
+          <tbody>
+            <% bajoStock.forEach(p => { %>
+              <tr class="fila-alerta"><td><%= p.nombre %></td><td><%= p.existencia %></td><td><%= p.stock_minimo %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

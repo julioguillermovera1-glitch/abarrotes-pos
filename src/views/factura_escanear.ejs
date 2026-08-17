@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Escanear factura — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'proveedores' }) %>
+
+  <main class="content">
+    <p><a href="/proveedores">← Volver a proveedores</a></p>
+    <h1>📷 Escanear factura de proveedor</h1>
+    <p>Sube una foto o PDF de la factura. El sistema intentará leer el proveedor, folio, fecha y monto automáticamente — <strong>siempre revisa los datos antes de guardar</strong>, el reconocimiento no es perfecto.</p>
+
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <% if (!extraido) { %>
+      <form method="POST" action="/proveedores/facturas/escanear" enctype="multipart/form-data" class="modal-contenido" style="width:400px; margin:0">
+        <label>Archivo (PDF, JPG o PNG)</label>
+        <input type="file" name="archivo" accept=".pdf,image/*" required>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Leer factura</button>
+      </form>
+    <% } else { %>
+      <form method="POST" action="/proveedores/facturas/confirmar" class="modal-contenido" style="width:420px; margin:0">
+        <label>Proveedor existente</label>
+        <select name="proveedor_id" id="proveedorSelect">
+          <option value="">-- Es un proveedor nuevo --</option>
+          <% proveedores.forEach(p => { %>
+            <option value="<%= p.id %>" <%= extraido.proveedor_nombre && p.nombre.toLowerCase() === extraido.proveedor_nombre.toLowerCase() ? 'selected' : '' %>>
+              <%= p.nombre %>
+            </option>
+          <% }) %>
+        </select>
+
+        <label>O nombre del proveedor nuevo</label>
+        <input type="text" name="proveedor_nombre_nuevo" id="proveedorNuevo" value="<%= extraido.proveedor_nombre || '' %>">
+
+        <label>Número de factura / folio</label>
+        <input type="text" name="numero_factura" value="<%= extraido.numero_factura || '' %>">
+
+        <label>Concepto</label>
+        <input type="text" name="concepto" placeholder="Opcional">
+
+        <label>Monto total</label>
+        <input type="number" step="1" min="0" name="monto" value="<%= extraido.monto || '' %>" required>
+
+        <label>Fecha de factura</label>
+        <input type="date" name="fecha_factura" value="<%= extraido.fecha_factura || '' %>" required>
+
+        <label>Fecha de vencimiento (opcional)</label>
+        <input type="date" name="fecha_vencimiento">
+
+        <div class="modal-botones">
+          <a href="/proveedores/facturas/escanear" class="btn btn-secondary">Escanear otra</a>
+          <button type="submit" class="btn btn-primary">Guardar factura</button>
+        </div>
+      </form>
+
+      <details style="margin-top:1.5rem">
+        <summary>Ver texto reconocido (para verificar)</summary>
+        <pre style="white-space:pre-wrap; background:white; padding:1rem; border-radius:6px; max-height:300px; overflow:auto"><%= extraido.texto_crudo %></pre>
+      </details>
+
+      <script>
+        // Si eligen un proveedor existente, limpiar el campo de "nuevo"
+        document.getElementById('proveedorSelect').addEventListener('change', function () {
+          if (this.value) document.getElementById('proveedorNuevo').value = '';
+        });
+      </script>
+    <% } %>
+  </main>
+</body>
+</html>
