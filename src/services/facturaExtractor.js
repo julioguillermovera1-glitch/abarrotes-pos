@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const ValidationError = require('../utils/ValidationError');
 
 // Extrae texto crudo de un PDF o imagen de factura.
 async function extraerTexto(filePath) {
@@ -28,7 +29,7 @@ async function extraerTexto(filePath) {
     }
   }
 
-  throw new Error('Formato no soportado. Sube un PDF o una imagen (jpg, png).');
+  throw new ValidationError('Formato no soportado. Sube un PDF o una imagen (jpg, png).');
 }
 
 // Heurísticas para extraer los campos clave de una factura de proveedor.

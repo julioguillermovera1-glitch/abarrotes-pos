@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 const { requireLogin } = require('../middleware/auth');
 const { abrirCaja } = require('../services/cajaRegistradora');
 const { turnoAbierto } = require('./caja');
+const ValidationError = require('../utils/ValidationError');
 
 const router = express.Router();
 
@@ -84,16 +85,20 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
 
     let total = 0;
     const detalles = [];
-    for (const item of items) {
+    // Se bloquean los productos siempre en el mismo orden (por id) para que
+    // dos ventas simultáneas con los mismos productos nunca se bloqueen
+    // mutuamente en orden distinto (interbloqueo/deadlock).
+    const itemsOrdenados = [...items].sort((a, b) => a.producto_id - b.producto_id);
+    for (const item of itemsOrdenados) {
       const [[producto]] = await conn.query(
         'SELECT id, precio_venta, tipo_venta, existencia, nombre FROM productos WHERE id = ? FOR UPDATE',
         [item.producto_id]
       );
-      if (!producto) throw new Error(`Producto ${item.producto_id} no encontrado`);
+      if (!producto) throw new ValidationError(`Producto ${item.producto_id} no encontrado`);
       if (producto.existencia < item.cantidad) {
         const disponible = producto.tipo_venta === 'peso'
           ? `${(producto.existencia / 1000).toLocaleString('es-CL')} kg` : producto.existencia;
-        throw new Error(`Existencia insuficiente de "${producto.nombre}" (disponible: ${disponible})`);
+        throw new ValidationError(`Existencia insuficiente de "${producto.nombre}" (disponible: ${disponible})`);
       }
       // Para productos "por peso", precio_venta es por kilo y cantidad viene en gramos.
       const subtotal = producto.tipo_venta === 'peso'
@@ -113,10 +118,10 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
         'SELECT id, saldo_pendiente, limite_credito, nombre FROM clientes WHERE id = ? FOR UPDATE',
         [cliente_id]
       );
-      if (!cliente) throw new Error('Cliente no encontrado');
+      if (!cliente) throw new ValidationError('Cliente no encontrado');
       const nuevoSaldo = Number(cliente.saldo_pendiente) + total;
       if (cliente.limite_credito > 0 && nuevoSaldo > Number(cliente.limite_credito)) {
-        throw new Error(`El crédito supera el límite de "${cliente.nombre}"`);
+        throw new ValidationError(`El crédito supera el límite de "${cliente.nombre}"`);
       }
     }
 
@@ -124,7 +129,7 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
       ? Number(pagado_con) - total
       : null;
     if (tipo_pago === 'efectivo' && cambio < 0) {
-      throw new Error('El monto pagado es menor al total');
+      throw new ValidationError('El monto pagado es menor al total');
     }
 
     const [ventaResult] = await conn.query(
@@ -157,7 +162,8 @@ router.post('/api/ventas', requireLogin, async (req, res) => {
     res.json({ ok: true, venta_id: ventaId, total, cambio });
   } catch (err) {
     await conn.rollback();
-    res.status(400).json({ error: err.message });
+    if (err instanceof ValidationError) return res.status(400).json({ error: err.message });
+    throw err;
   } finally {
     conn.release();
   }
@@ -177,7 +183,7 @@ router.get('/ventas/:id/ticket', requireLogin, async (req, res) => {
   const [detalle] = await pool.query(
     `SELECT vd.*, p.nombre AS producto_nombre, p.tipo_venta
      FROM venta_detalle vd JOIN productos p ON p.id = vd.producto_id
-     WHERE vd.venta_id = ?`,
+     WHERE vd.venta_id = ? ORDER BY vd.id`,
     [req.params.id]
   );
   res.render('ticket', { venta, detalle });

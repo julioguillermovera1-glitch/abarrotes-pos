@@ -49,10 +49,14 @@ async function sincronizar() {
 
   try {
     const resumen = await construirResumen(localId, localNombre);
+    // El panel central gratis se "duerme" con la inactividad y puede tardar
+    // hasta ~50 seg en despertar; se le da margen pero sin colgar para siempre
+    // si de verdad no responde (no debe afectar la venta local).
     const res = await fetch(`${centralUrl.replace(/\/$/, '')}/api/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Sync-Key': syncSecret },
-      body: JSON.stringify(resumen)
+      body: JSON.stringify(resumen),
+      signal: AbortSignal.timeout(60 * 1000)
     });
     if (!res.ok) {
       console.error(`Sync: el panel central respondió ${res.status}`);

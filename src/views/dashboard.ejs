@@ -10,18 +10,27 @@
     <div class="navbar-brand">🏬 Panel Central</div>
     <div class="navbar-links"></div>
     <div class="navbar-user">
+      <button type="button" class="link-button" onclick="document.getElementById('modalCambiarPassword').style.display='flex'">🔑 Cambiar contraseña</button>
       <span><%= usuario.usuario %></span>
       <form method="POST" action="/logout" style="display:inline">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button type="submit" class="link-button">Salir</button>
       </form>
     </div>
   </nav>
+
+  <% if (passwordPorDefecto) { %>
+    <div class="alert alert-error" style="margin:1rem 1.5rem 0; border-radius:6px">
+      ⚠️ Estás usando la contraseña por defecto (admin123). Cámbiala ahora con el botón "🔑 Cambiar contraseña" arriba — es de conocimiento público porque está en el código fuente.
+    </div>
+  <% } %>
 
   <main class="content">
     <div class="content-header">
       <h1>Resumen de todos los locales</h1>
       <div style="display:flex; gap:0.6rem">
         <form method="POST" action="/api/limpiar-locales" onsubmit="return confirm('¿Desconectar TODOS los locales del panel? Cada uno deberá emparejarse de nuevo con un código.')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="btn btn-secondary">🧹 Desconectar todos los locales</button>
         </form>
         <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
@@ -126,7 +135,7 @@
       const nombre = document.getElementById('nombreLocalNuevo').value;
       const res = await fetch('/api/generar-codigo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
         body: JSON.stringify({ local_nombre: nombre })
       });
       const data = await res.json();
@@ -141,6 +150,42 @@
       document.getElementById('pasoCodigo').style.display = 'none';
       document.getElementById('nombreLocalNuevo').value = '';
     }
+
+    async function cambiarPassword() {
+      const password_actual = document.getElementById('passwordActual').value;
+      const password_nueva = document.getElementById('passwordNueva').value;
+      const msg = document.getElementById('mensajeCambiarPassword');
+      msg.style.display = 'none';
+
+      const res = await fetch('/api/cambiar-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ password_actual, password_nueva })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error;
+        msg.className = 'alert alert-error';
+        msg.style.display = 'block';
+        return;
+      }
+      location.reload();
+    }
   </script>
+
+  <div id="modalCambiarPassword" class="modal">
+    <div class="modal-contenido">
+      <h2>Cambiar contraseña</h2>
+      <div id="mensajeCambiarPassword" class="alert" style="display:none"></div>
+      <label>Contraseña actual</label>
+      <input type="password" id="passwordActual" required>
+      <label>Contraseña nueva (mínimo 6 caracteres)</label>
+      <input type="password" id="passwordNueva" required minlength="6">
+      <div class="modal-botones">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalCambiarPassword').style.display='none'">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="cambiarPassword()">Guardar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

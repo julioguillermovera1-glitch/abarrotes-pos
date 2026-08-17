@@ -16,6 +16,7 @@
     <% if (!turno) { %>
       <p style="color:#888">No hay ningún turno abierto. Antes de vender, abre la caja indicando cuánto dinero dejas para los vueltos.</p>
       <form method="POST" action="/caja/abrir" class="modal-contenido" style="width:auto; padding:1.2rem">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Monto que dejas en caja para los vueltos</label>
         <input type="number" name="monto_apertura" step="1" min="0" value="0" required autofocus>
         <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Abrir caja</button>
@@ -33,6 +34,7 @@
       <h2 style="margin-top:1.5rem">Cerrar caja / cambio de turno</h2>
       <p style="color:#888">Cuenta el dinero físico en caja y anótalo aquí. Si entra otra vendedora, que cuente ella misma antes de firmar.</p>
       <form method="POST" action="/caja/cerrar" class="modal-contenido" style="width:auto; padding:1.2rem">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Monto contado en caja (todo el efectivo)</label>
         <input type="number" name="monto_cierre" step="1" min="0" required autofocus>
         <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Cerrar caja</button>

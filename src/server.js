@@ -1,7 +1,9 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('express-async-errors'); // hace que los errores en rutas async caigan al manejador de errores en vez de tumbar el proceso
 const express = require('express');
 const session = require('express-session');
+const { emitirToken, verificarToken } = require('./middleware/csrf');
 
 const app = express();
 const APP_MODE = process.env.APP_MODE === 'central' ? 'central' : 'local';
@@ -13,12 +15,29 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+if (APP_MODE === 'central') {
+  // Render (y proxys similares) terminan el HTTPS antes de llegar a la app;
+  // sin esto, la cookie "secure" nunca se marcaría como enviada por HTTPS.
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 }
+  cookie: {
+    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: 'lax',
+    secure: APP_MODE === 'central' // en local se sirve por http://localhost, no tiene TLS
+  }
 }));
+
+app.use(emitirToken);
+app.use(verificarToken);
+app.use((req, res, next) => {
+  res.locals.passwordPorDefecto = !!req.session.passwordPorDefecto;
+  next();
+});
 
 // Formato de moneda para Chile (CLP): sin decimales, puntos de miles.
 app.locals.moneyCL = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
@@ -56,6 +75,26 @@ if (APP_MODE === 'central') {
 }
 
 app.use((req, res) => res.status(404).send('Página no encontrada'));
+
+// Manejador de errores global: cualquier excepción que se escape de una ruta
+// (incluidas las async, gracias a express-async-errors) termina aquí en vez
+// de tumbar el proceso. Al usuario nunca se le muestra el detalle interno.
+app.use((err, req, res, next) => {
+  console.error('Error no manejado:', err);
+  const esApi = req.path.startsWith('/api/');
+  const mensaje = 'Ocurrió un error inesperado. Intenta de nuevo.';
+  if (esApi) {
+    res.status(500).json({ error: mensaje });
+  } else {
+    res.status(500).send(mensaje);
+  }
+});
+
+// Última red de seguridad: si algo se escapa fuera del ciclo de una petición
+// (por ejemplo en el servicio de sincronización), se registra pero no se
+// tumba el proceso — más vale seguir vendiendo que reiniciar a medio día.
+process.on('unhandledRejection', (err) => console.error('Promesa no manejada:', err));
+process.on('uncaughtException', (err) => console.error('Excepción no capturada:', err));
 
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => {

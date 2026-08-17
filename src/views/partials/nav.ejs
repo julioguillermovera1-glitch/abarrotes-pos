@@ -4,10 +4,10 @@
     <a href="/ventas" class="<%= typeof active !== 'undefined' && active === 'ventas' ? 'active' : '' %>">Venta</a>
     <a href="/inventario" class="<%= typeof active !== 'undefined' && active === 'inventario' ? 'active' : '' %>">Inventario</a>
     <a href="/clientes" class="<%= typeof active !== 'undefined' && active === 'clientes' ? 'active' : '' %>">Clientes</a>
-    <a href="/proveedores" class="<%= typeof active !== 'undefined' && active === 'proveedores' ? 'active' : '' %>">Proveedores</a>
-    <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
     <a href="/caja" class="<%= typeof active !== 'undefined' && active === 'caja' ? 'active' : '' %>">Caja</a>
     <% if (usuario.rol === 'admin') { %>
+      <a href="/proveedores" class="<%= typeof active !== 'undefined' && active === 'proveedores' ? 'active' : '' %>">Proveedores</a>
+      <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
       <a href="/usuarios" class="<%= typeof active !== 'undefined' && active === 'usuarios' ? 'active' : '' %>">Usuarios</a>
     <% } %>
   </div>
@@ -15,7 +15,15 @@
     <a href="/setup-sync" class="<%= typeof active !== 'undefined' && active === 'setup' ? 'active' : '' %>">🔗 Panel central</a>
     <span><%= usuario.nombre %></span>
     <form method="POST" action="/logout" style="display:inline">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <button type="submit" class="link-button">Salir</button>
     </form>
   </div>
 </nav>
+
+<% if (passwordPorDefecto) { %>
+  <div class="alert alert-error" style="margin:1rem 1.5rem 0; border-radius:6px">
+    ⚠️ Estás usando la contraseña por defecto (admin123). Cámbiala ahora en
+    <a href="/usuarios">Usuarios → Restablecer contraseña</a> — es de conocimiento público porque está en el código fuente.
+  </div>
+<% } %>

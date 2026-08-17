@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireLogin } = require('../middleware/auth');
+const ValidationError = require('../utils/ValidationError');
 
 const router = express.Router();
 
@@ -59,6 +60,9 @@ router.post('/inventario/productos/:id/movimiento', requireLogin, async (req, re
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    if (!cant || cant <= 0) throw new ValidationError('La cantidad debe ser mayor a 0');
+    if (precio_compra && Number(precio_compra) < 0) throw new ValidationError('El precio de compra no puede ser negativo');
+
     const delta = tipo === 'salida' ? -cant : cant; // 'entrada' y 'ajuste' positivo suman
     await conn.query('UPDATE productos SET existencia = existencia + ? WHERE id = ?', [delta, req.params.id]);
     if (precio_compra) {
@@ -73,7 +77,8 @@ router.post('/inventario/productos/:id/movimiento', requireLogin, async (req, re
     res.redirect('/inventario');
   } catch (err) {
     await conn.rollback();
-    res.status(400).send(err.message);
+    if (err instanceof ValidationError) return res.status(400).send(err.message);
+    throw err;
   } finally {
     conn.release();
   }

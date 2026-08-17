@@ -29,6 +29,7 @@
             <td class="acciones">
               <a href="/clientes/<%= c.id %>" class="btn-mini">Ver</a>
               <form method="POST" action="/clientes/<%= c.id %>/desactivar" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini btn-danger"><%= c.activo ? 'Desactivar' : 'Activar' %></button>
               </form>
             </td>
@@ -42,6 +43,7 @@
     <div class="modal-contenido">
       <h2>Nuevo cliente</h2>
       <form method="POST" action="/clientes">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Nombre</label>
         <input type="text" name="nombre" required>
         <label>Teléfono</label>

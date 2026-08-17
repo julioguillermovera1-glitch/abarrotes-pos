@@ -146,6 +146,7 @@
   </div>
 
   <script>
+    window.CSRF_TOKEN = '<%= csrfToken %>';
     function mostrarTab(tab) {
       document.getElementById('tabNuevaVenta').style.display = tab === 'nuevaVenta' ? 'flex' : 'none';
       document.getElementById('tabVentasHoy').style.display = tab === 'ventasHoy' ? 'block' : 'none';

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireLogin } = require('../middleware/auth');
+const ValidationError = require('../utils/ValidationError');
 
 const router = express.Router();
 
@@ -52,9 +53,9 @@ router.post('/clientes/:id/abono', requireLogin, async (req, res) => {
   try {
     await conn.beginTransaction();
     const [[cliente]] = await conn.query('SELECT saldo_pendiente FROM clientes WHERE id = ? FOR UPDATE', [req.params.id]);
-    if (!cliente) throw new Error('Cliente no encontrado');
+    if (!cliente) throw new ValidationError('Cliente no encontrado');
     if (monto <= 0 || monto > Number(cliente.saldo_pendiente)) {
-      throw new Error('Monto de abono inválido');
+      throw new ValidationError('Monto de abono inválido');
     }
     await conn.query('UPDATE clientes SET saldo_pendiente = saldo_pendiente - ? WHERE id = ?', [monto, req.params.id]);
     await conn.query(
@@ -65,7 +66,8 @@ router.post('/clientes/:id/abono', requireLogin, async (req, res) => {
     res.redirect(`/clientes/${req.params.id}`);
   } catch (err) {
     await conn.rollback();
-    res.status(400).send(err.message);
+    if (err instanceof ValidationError) return res.status(400).send(err.message);
+    throw err;
   } finally {
     conn.release();
   }

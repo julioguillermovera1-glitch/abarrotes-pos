@@ -278,7 +278,7 @@ document.getElementById('btnCobrar').addEventListener('click', async () => {
 
   const res = await fetch('/api/ventas', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN },
     body: JSON.stringify(body)
   });
   const data = await res.json();

@@ -1,10 +1,19 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const QRCode = require('qrcode');
 const pool = require('../db/pool');
 
 const router = express.Router();
+
+const limitarLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Demasiados intentos de inicio de sesión. Espera unos minutos e intenta de nuevo.'
+});
 
 function requireCentralLogin(req, res, next) {
   if (!req.session.centralUser) return res.redirect('/login');
@@ -17,7 +26,7 @@ router.get('/login', (req, res) => {
   res.render('central_login', { error: null });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', limitarLogin, async (req, res) => {
   const { usuario, password } = req.body;
   const [rows] = await pool.query('SELECT * FROM central_admins WHERE usuario = ?', [usuario]);
   const user = rows[0];
@@ -25,11 +34,28 @@ router.post('/login', async (req, res) => {
     return res.render('central_login', { error: 'Usuario o contraseña incorrectos' });
   }
   req.session.centralUser = { id: user.id, usuario: user.usuario };
+  req.session.passwordPorDefecto = user.usuario === 'admin' && password === 'admin123';
   res.redirect('/dashboard');
 });
 
 router.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
+});
+
+// --- Cambiar la contraseña del propio admin del panel central ---
+router.post('/api/cambiar-password', requireCentralLogin, async (req, res) => {
+  const { password_actual, password_nueva } = req.body;
+  const [[user]] = await pool.query('SELECT * FROM central_admins WHERE id = ?', [req.session.centralUser.id]);
+  if (!user || !bcrypt.compareSync(password_actual || '', user.password_hash)) {
+    return res.status(400).json({ error: 'La contraseña actual no es correcta' });
+  }
+  if (!password_nueva || password_nueva.length < 6) {
+    return res.status(400).json({ error: 'La contraseña nueva debe tener al menos 6 caracteres' });
+  }
+  const nuevoHash = bcrypt.hashSync(password_nueva, 10);
+  await pool.query('UPDATE central_admins SET password_hash = ? WHERE id = ?', [nuevoHash, user.id]);
+  req.session.passwordPorDefecto = false;
+  res.json({ ok: true });
 });
 
 // --- Desconecta todos los locales del panel (para dejarlo en blanco antes de

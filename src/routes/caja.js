@@ -46,16 +46,37 @@ router.get('/caja', requireLogin, async (req, res) => {
 });
 
 router.post('/caja/abrir', requireLogin, async (req, res) => {
-  const existente = await turnoAbierto();
-  if (existente) {
-    return res.redirect('/caja');
+  const monto = Math.max(0, Number(req.body.monto_apertura) || 0);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    // Bloquea la fila mientras dura esta transacción: si dos personas
+    // presionan "Abrir caja" al mismo tiempo, la segunda espera aquí hasta
+    // que la primera termine, y al re-consultar ya va a encontrar un turno
+    // abierto — así nunca quedan dos turnos abiertos a la vez.
+    await conn.query('SELECT id FROM turno_lock WHERE id = 1 FOR UPDATE');
+
+    const [[existente]] = await conn.query(
+      `SELECT id FROM turnos WHERE estado = 'abierto' LIMIT 1`
+    );
+    if (existente) {
+      await conn.commit();
+      return res.redirect('/caja');
+    }
+
+    await conn.query(
+      'INSERT INTO turnos (usuario_id, monto_apertura) VALUES (?, ?)',
+      [req.session.usuario.id, monto]
+    );
+    await conn.commit();
+    res.redirect('/caja');
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  const monto = Number(req.body.monto_apertura) || 0;
-  await pool.query(
-    'INSERT INTO turnos (usuario_id, monto_apertura) VALUES (?, ?)',
-    [req.session.usuario.id, monto]
-  );
-  res.redirect('/caja');
 });
 
 router.post('/caja/cerrar', requireLogin, async (req, res) => {
@@ -68,7 +89,7 @@ router.post('/caja/cerrar', requireLogin, async (req, res) => {
     [turno.id]
   );
   const montoEsperado = Number(turno.monto_apertura) + Number(r.total);
-  const montoCierre = Number(req.body.monto_cierre) || 0;
+  const montoCierre = Math.max(0, Number(req.body.monto_cierre) || 0);
   const diferencia = montoCierre - montoEsperado;
 
   await pool.query(

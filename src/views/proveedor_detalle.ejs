@@ -64,6 +64,7 @@
     <div class="modal-contenido">
       <h2>Registrar factura</h2>
       <form method="POST" action="/proveedores/<%= proveedor.id %>/facturas">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Número de factura / folio</label>
         <input type="text" name="numero_factura">
         <label>Concepto</label>
@@ -86,6 +87,7 @@
     <div class="modal-contenido">
       <h2>Registrar pago: <span id="pagoFacturaNombre"></span></h2>
       <form method="POST" id="formPago">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="hidden" name="factura_id" id="pagoFacturaId">
         <label>Monto a pagar</label>
         <input type="number" step="1" name="monto" id="pagoMonto" required>

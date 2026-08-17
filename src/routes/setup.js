@@ -37,7 +37,8 @@ router.post('/setup-sync', requireLogin, async (req, res) => {
     const resp = await fetch(`${centralUrl.replace(/\/$/, '')}/api/pair`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: codigo })
+      body: JSON.stringify({ code: codigo }),
+      signal: AbortSignal.timeout(60 * 1000)
     });
     const data = await resp.json();
     if (!resp.ok) {

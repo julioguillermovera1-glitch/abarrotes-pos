@@ -1,10 +1,10 @@
 const express = require('express');
 const pool = require('../db/pool');
-const { requireLogin } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/reportes', requireLogin, async (req, res) => {
+router.get('/reportes', requireAdmin, async (req, res) => {
   let { desde, hasta } = req.query;
   if (!desde || !hasta) {
     const [[hoy]] = await pool.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoy");

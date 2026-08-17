@@ -25,6 +25,7 @@
         <% categorias.forEach(c => { %><li><%= c.nombre %></li><% }) %>
       </ul>
       <form method="POST" action="/inventario/categorias" class="form-inline">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="text" name="nombre" placeholder="Nueva categoría" required>
         <button type="submit" class="btn btn-secondary">Agregar</button>
       </form>
@@ -51,6 +52,7 @@
             <td class="acciones">
               <button class="btn-mini" onclick="abrirMovimiento(<%= p.id %>, '<%= p.nombre.replace(/'/g, "\\'") %>', '<%= p.tipo_venta %>', <%= p.precio_compra %>)">Ajustar</button>
               <form method="POST" action="/inventario/productos/<%= p.id %>/desactivar" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini btn-danger"><%= p.activo ? 'Desactivar' : 'Activar' %></button>
               </form>
             </td>
@@ -65,6 +67,7 @@
     <div class="modal-contenido">
       <h2>Nuevo producto</h2>
       <form method="POST" action="/inventario/productos">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Código de barra</label>
         <input type="text" name="codigo_barra" id="nuevoCodigoBarra">
         <label>Nombre</label>
@@ -106,6 +109,7 @@
     <div class="modal-contenido">
       <h2>Ajustar existencia: <span id="movProductoNombre"></span></h2>
       <form method="POST" id="formMovimiento">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Tipo</label>
         <select name="tipo">
           <option value="entrada">Entrada</option>

@@ -44,9 +44,11 @@
             <td class="acciones">
               <button class="btn-mini" onclick="abrirEditar(<%= u.id %>, '<%= u.nombre.replace(/'/g, "\\'") %>', '<%= u.rol %>')">Editar</button>
               <form method="POST" action="/usuarios/<%= u.id %>/restablecer" style="display:inline" onsubmit="return confirm('¿Generar una contraseña nueva para <%= u.nombre.replace(/'/g, "\\'") %>? La anterior dejará de funcionar.')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini">Restablecer contraseña</button>
               </form>
               <form method="POST" action="/usuarios/<%= u.id %>/desactivar" style="display:inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini btn-danger"><%= u.activo ? 'Desactivar' : 'Activar' %></button>
               </form>
             </td>
@@ -61,6 +63,7 @@
     <div class="modal-contenido">
       <h2>Nuevo usuario</h2>
       <form method="POST" action="/usuarios">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Nombre</label>
         <input type="text" name="nombre" placeholder="Ej: María González" required>
         <label>Usuario (para iniciar sesión)</label>
@@ -85,6 +88,7 @@
     <div class="modal-contenido">
       <h2>Editar usuario</h2>
       <form method="POST" id="formEditar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Nombre</label>
         <input type="text" name="nombre" id="editarNombre" required>
         <label>Rol</label>

@@ -3,8 +3,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const pool = require('../db/pool');
-const { requireLogin } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 const { procesarFactura } = require('../services/facturaExtractor');
+const ValidationError = require('../utils/ValidationError');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 }
 });
 
-router.get('/proveedores', requireLogin, async (req, res) => {
+router.get('/proveedores', requireAdmin, async (req, res) => {
   const [proveedores] = await pool.query(`
     SELECT p.*, COALESCE(SUM(f.saldo_pendiente), 0) AS saldo_total
     FROM proveedores p
@@ -33,7 +34,7 @@ router.get('/proveedores', requireLogin, async (req, res) => {
   res.render('proveedores', { usuario: req.session.usuario, proveedores });
 });
 
-router.post('/proveedores', requireLogin, async (req, res) => {
+router.post('/proveedores', requireAdmin, async (req, res) => {
   const { nombre, contacto, telefono, direccion } = req.body;
   await pool.query(
     'INSERT INTO proveedores (nombre, contacto, telefono, direccion) VALUES (?, ?, ?, ?)',
@@ -42,12 +43,12 @@ router.post('/proveedores', requireLogin, async (req, res) => {
   res.redirect('/proveedores');
 });
 
-router.post('/proveedores/:id/desactivar', requireLogin, async (req, res) => {
+router.post('/proveedores/:id/desactivar', requireAdmin, async (req, res) => {
   await pool.query('UPDATE proveedores SET activo = NOT activo WHERE id = ?', [req.params.id]);
   res.redirect('/proveedores');
 });
 
-router.get('/proveedores/:id', requireLogin, async (req, res) => {
+router.get('/proveedores/:id', requireAdmin, async (req, res) => {
   const [[proveedor]] = await pool.query('SELECT * FROM proveedores WHERE id = ?', [req.params.id]);
   if (!proveedor) return res.status(404).send('Proveedor no encontrado');
   const [facturas] = await pool.query(
@@ -62,7 +63,7 @@ router.get('/proveedores/:id', requireLogin, async (req, res) => {
 });
 
 // --- Registrar factura manualmente ---
-router.post('/proveedores/:id/facturas', requireLogin, async (req, res) => {
+router.post('/proveedores/:id/facturas', requireAdmin, async (req, res) => {
   const { numero_factura, concepto, monto, fecha_factura, fecha_vencimiento } = req.body;
   const montoNum = Number(monto);
   await pool.query(
@@ -76,7 +77,7 @@ router.post('/proveedores/:id/facturas', requireLogin, async (req, res) => {
 });
 
 // --- Registrar pago de una factura ---
-router.post('/proveedores/:id/pagos', requireLogin, async (req, res) => {
+router.post('/proveedores/:id/pagos', requireAdmin, async (req, res) => {
   const { factura_id, monto } = req.body;
   const montoNum = Number(monto);
   const conn = await pool.getConnection();
@@ -88,9 +89,9 @@ router.post('/proveedores/:id/pagos', requireLogin, async (req, res) => {
         'SELECT saldo_pendiente FROM facturas_proveedor WHERE id = ? AND proveedor_id = ? FOR UPDATE',
         [factura_id, req.params.id]
       );
-      if (!factura) throw new Error('Factura no encontrada');
+      if (!factura) throw new ValidationError('Factura no encontrada');
       if (montoNum <= 0 || montoNum > Number(factura.saldo_pendiente)) {
-        throw new Error('Monto de pago inválido');
+        throw new ValidationError('Monto de pago inválido');
       }
       const nuevoSaldo = Number(factura.saldo_pendiente) - montoNum;
       await conn.query(
@@ -108,19 +109,20 @@ router.post('/proveedores/:id/pagos', requireLogin, async (req, res) => {
     res.redirect(`/proveedores/${req.params.id}`);
   } catch (err) {
     await conn.rollback();
-    res.status(400).send(err.message);
+    if (err instanceof ValidationError) return res.status(400).send(err.message);
+    throw err;
   } finally {
     conn.release();
   }
 });
 
 // --- Escanear factura (PDF o foto) ---
-router.get('/proveedores/facturas/escanear', requireLogin, async (req, res) => {
+router.get('/proveedores/facturas/escanear', requireAdmin, async (req, res) => {
   const [proveedores] = await pool.query('SELECT id, nombre FROM proveedores WHERE activo = 1 ORDER BY nombre');
   res.render('factura_escanear', { usuario: req.session.usuario, proveedores, extraido: null, error: null });
 });
 
-router.post('/proveedores/facturas/escanear', requireLogin, upload.single('archivo'), async (req, res) => {
+router.post('/proveedores/facturas/escanear', requireAdmin, upload.single('archivo'), async (req, res) => {
   const [proveedores] = await pool.query('SELECT id, nombre FROM proveedores WHERE activo = 1 ORDER BY nombre');
   if (!req.file) {
     return res.render('factura_escanear', { usuario: req.session.usuario, proveedores, extraido: null, error: 'Selecciona un archivo (PDF o foto).' });
@@ -129,14 +131,16 @@ router.post('/proveedores/facturas/escanear', requireLogin, upload.single('archi
     const datos = await procesarFactura(req.file.path);
     res.render('factura_escanear', { usuario: req.session.usuario, proveedores, extraido: datos, error: null });
   } catch (err) {
-    res.render('factura_escanear', { usuario: req.session.usuario, proveedores, extraido: null, error: err.message });
+    if (!(err instanceof ValidationError)) console.error('Error al leer factura:', err);
+    const mensaje = err instanceof ValidationError ? err.message : 'No se pudo leer el archivo. Intenta con otra foto o revisa el PDF.';
+    res.render('factura_escanear', { usuario: req.session.usuario, proveedores, extraido: null, error: mensaje });
   } finally {
     fs.unlink(req.file.path, () => {});
   }
 });
 
 // --- Confirmar y guardar la factura escaneada (crea proveedor si no existe) ---
-router.post('/proveedores/facturas/confirmar', requireLogin, async (req, res) => {
+router.post('/proveedores/facturas/confirmar', requireAdmin, async (req, res) => {
   const { proveedor_id, proveedor_nombre_nuevo, numero_factura, concepto, monto, fecha_factura, fecha_vencimiento } = req.body;
 
   const conn = await pool.getConnection();
@@ -148,11 +152,11 @@ router.post('/proveedores/facturas/confirmar', requireLogin, async (req, res) =>
       const [result] = await conn.query('INSERT INTO proveedores (nombre) VALUES (?)', [proveedor_nombre_nuevo.trim()]);
       provId = result.insertId;
     }
-    if (!provId) throw new Error('Selecciona o escribe un proveedor');
+    if (!provId) throw new ValidationError('Selecciona o escribe un proveedor');
 
     const montoNum = Number(monto);
-    if (!montoNum || montoNum <= 0) throw new Error('El monto no es válido');
-    if (!fecha_factura) throw new Error('La fecha de factura es requerida');
+    if (!montoNum || montoNum <= 0) throw new ValidationError('El monto no es válido');
+    if (!fecha_factura) throw new ValidationError('La fecha de factura es requerida');
 
     await conn.query(
       `INSERT INTO facturas_proveedor
@@ -166,7 +170,8 @@ router.post('/proveedores/facturas/confirmar', requireLogin, async (req, res) =>
     res.redirect(`/proveedores/${provId}`);
   } catch (err) {
     await conn.rollback();
-    res.status(400).send(err.message);
+    if (err instanceof ValidationError) return res.status(400).send(err.message);
+    throw err;
   } finally {
     conn.release();
   }

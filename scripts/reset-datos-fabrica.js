@@ -15,6 +15,20 @@ async function main() {
     process.exit(1);
   }
 
+  // Freno de seguridad: si esta base ya tiene bastante actividad, probablemente
+  // es una tienda real en uso y no una instalación de prueba — exige --forzar
+  // además de --confirmar para no borrar por error el negocio de un cliente.
+  const [[{ n: numVentas }]] = await pool.query('SELECT COUNT(*) AS n FROM ventas');
+  const [[{ n: numProductos }]] = await pool.query('SELECT COUNT(*) AS n FROM productos');
+  const parececonDatosReales = numVentas > 3 || numProductos > 5;
+  if (parececonDatosReales && !process.argv.includes('--forzar')) {
+    console.log(`¡Atención! Esta base ya tiene ${numVentas} ventas y ${numProductos} productos —`);
+    console.log('no parece una instalación de prueba recién armada. Si de verdad quieres borrar');
+    console.log('TODO esto, vuelve a ejecutar agregando también --forzar:');
+    console.log('  node scripts/reset-datos-fabrica.js --confirmar --forzar');
+    process.exit(1);
+  }
+
   const tablas = [
     'venta_detalle',
     'abonos_credito',

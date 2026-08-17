@@ -17,12 +17,14 @@
 
     <% if (!extraido) { %>
       <form method="POST" action="/proveedores/facturas/escanear" enctype="multipart/form-data" class="modal-contenido" style="width:400px; margin:0">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Archivo (PDF, JPG o PNG)</label>
         <input type="file" name="archivo" accept=".pdf,image/*" required>
         <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Leer factura</button>
       </form>
     <% } else { %>
       <form method="POST" action="/proveedores/facturas/confirmar" class="modal-contenido" style="width:420px; margin:0">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label>Proveedor existente</label>
         <select name="proveedor_id" id="proveedorSelect">
           <option value="">-- Es un proveedor nuevo --</option>

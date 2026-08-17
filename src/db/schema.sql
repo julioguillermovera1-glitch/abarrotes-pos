@@ -54,6 +54,13 @@ CREATE TABLE IF NOT EXISTS clientes (
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Fila única usada solo para serializar la apertura de turno (SELECT ... FOR
+-- UPDATE) y evitar que dos personas abran caja al mismo tiempo.
+CREATE TABLE IF NOT EXISTS turno_lock (
+  id INT PRIMARY KEY DEFAULT 1
+);
+INSERT IGNORE INTO turno_lock (id) VALUES (1);
+
 CREATE TABLE IF NOT EXISTS turnos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL,
