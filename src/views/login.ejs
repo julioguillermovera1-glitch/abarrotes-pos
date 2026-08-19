@@ -7,7 +7,8 @@
 </head>
 <body class="login-body">
   <div class="login-card">
-    <h1>🛒 Abarrotes POS</h1>
+    <img src="/img/icon.ico" alt="Abarrotes POS" style="width:64px; height:64px; border-radius:14px; margin-bottom:0.4rem">
+    <h1>Abarrotes POS</h1>
     <p class="subtitle">Iniciar sesión</p>
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>
@@ -20,6 +21,7 @@
       <input type="password" name="password" required>
       <button type="submit" class="btn btn-primary btn-block">Entrar</button>
     </form>
+    <p style="margin-top:0.8rem"><a href="/recuperar">¿Olvidaste tu contraseña?</a></p>
   </div>
 </body>
 </html>

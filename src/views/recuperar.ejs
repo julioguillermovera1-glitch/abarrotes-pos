@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recuperar contraseña — Abarrotes POS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <img src="/img/icon.ico" alt="Abarrotes POS" style="width:64px; height:64px; border-radius:14px; margin-bottom:0.4rem">
+    <h1>Abarrotes POS</h1>
+    <p class="subtitle">Recuperar contraseña</p>
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+    <% if (exito) { %>
+      <div class="alert alert-success"><%= exito %></div>
+    <% } %>
+    <% if (!exito) { %>
+      <form method="POST" action="/recuperar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>Clave de recuperación</label>
+        <input type="text" name="clave" required autofocus placeholder="Está en CLAVE-DE-RECUPERACION.txt, en la carpeta del programa">
+        <label>Nueva contraseña</label>
+        <input type="password" name="password" required minlength="4">
+        <label>Confirmar nueva contraseña</label>
+        <input type="password" name="confirmar" required minlength="4">
+        <button type="submit" class="btn btn-primary btn-block">Cambiar contraseña</button>
+      </form>
+    <% } %>
+    <p style="margin-top:0.8rem"><a href="/login">Volver a iniciar sesión</a></p>
+  </div>
+</body>
+</html>

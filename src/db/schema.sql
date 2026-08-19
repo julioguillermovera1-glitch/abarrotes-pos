@@ -1,6 +1,14 @@
 CREATE DATABASE IF NOT EXISTS abarrotes_pos CHARACTER SET utf8mb4;
 USE abarrotes_pos;
 
+-- Fila única con la clave de recuperación (para restablecer la contraseña
+-- del administrador sin depender de comandos). Se genera sola la primera
+-- vez y queda guardada en el archivo CLAVE-DE-RECUPERACION.txt.
+CREATE TABLE IF NOT EXISTS recuperacion (
+  id INT PRIMARY KEY DEFAULT 1,
+  clave_hash VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
