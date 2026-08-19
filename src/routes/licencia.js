@@ -21,12 +21,19 @@ async function obtenerOCrearLicencia() {
   return creada;
 }
 
+// Una licencia activada sigue vigente si no tiene fecha de vencimiento
+// (indefinida) o si esa fecha todavía no pasó.
+function vigente(licencia) {
+  return !licencia.expira_en || new Date(licencia.expira_en) > new Date();
+}
+
 router.get('/licencia', requireLogin, async (req, res) => {
   const licencia = await obtenerOCrearLicencia();
   res.render('licencia', {
     usuario: req.session.usuario,
     licencia,
     dias: diasRestantes(licencia.fecha_instalacion),
+    vigente: vigente(licencia),
     error: null
   });
 });
@@ -43,6 +50,7 @@ router.post('/licencia/activar', requireLogin, async (req, res) => {
       usuario: req.session.usuario,
       licencia,
       dias: diasRestantes(licencia.fecha_instalacion),
+      vigente: vigente(licencia),
       error: 'Escribe el código de activación.'
     });
   }
@@ -61,6 +69,7 @@ router.post('/licencia/activar', requireLogin, async (req, res) => {
         usuario: req.session.usuario,
         licencia,
         dias: diasRestantes(licencia.fecha_instalacion),
+        vigente: vigente(licencia),
         error: data.error || 'Ese código no es válido.'
       });
     }
@@ -69,11 +78,15 @@ router.post('/licencia/activar', requireLogin, async (req, res) => {
       usuario: req.session.usuario,
       licencia,
       dias: diasRestantes(licencia.fecha_instalacion),
+      vigente: vigente(licencia),
       error: 'No se pudo conectar para activar. Este paso necesita internet — revisa la conexión e intenta de nuevo.'
     });
   }
 
-  await pool.query('UPDATE licencia SET activado = 1, codigo_activacion = ? WHERE id = 1', [codigo]);
+  await pool.query(
+    'UPDATE licencia SET activado = 1, codigo_activacion = ?, expira_en = ? WHERE id = 1',
+    [codigo, data.expira_en || null]
+  );
   res.redirect('/ventas');
 });
 

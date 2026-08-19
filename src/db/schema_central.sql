@@ -56,9 +56,12 @@ CREATE TABLE IF NOT EXISTS local_credentials (
 -- de los 7 días de prueba gratis. El local necesita internet en el momento
 -- de activar: el código se valida aquí, no con una fórmula local, para que
 -- no se pueda generar uno falso sin conocer el código real.
+-- meses: cuántos meses de licencia da este código (12 = 1 año, 60 = 5 años).
+-- NULL = licencia indefinida (no vence nunca).
 CREATE TABLE IF NOT EXISTS codigos_activacion (
   code VARCHAR(10) PRIMARY KEY,
   nota VARCHAR(150),
+  meses INT NULL,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   usado TINYINT(1) NOT NULL DEFAULT 0,
   instalacion_id VARCHAR(32),

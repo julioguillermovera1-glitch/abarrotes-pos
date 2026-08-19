@@ -18,7 +18,23 @@ async function verificarLicencia(req, res, next) {
   }
 
   const licencia = await obtenerOCrearLicencia();
-  if (licencia.activado) return next();
+  if (licencia.activado) {
+    const vigente = !licencia.expira_en || new Date(licencia.expira_en) > new Date();
+    if (vigente) {
+      // Aviso temprano si la licencia paga vence pronto (no aplica a las
+      // indefinidas, esas no tienen expira_en).
+      if (licencia.expira_en) {
+        const diasParaVencer = Math.ceil((new Date(licencia.expira_en).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        if (diasParaVencer <= 14) res.locals.diasLicenciaRestantes = diasParaVencer;
+      }
+      return next();
+    }
+
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ error: 'Tu licencia venció. Ve a "Licencia" para renovarla.' });
+    }
+    return res.redirect('/licencia');
+  }
 
   const dias = diasRestantes(licencia.fecha_instalacion);
   res.locals.diasPruebaRestantes = dias;

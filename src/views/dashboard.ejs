@@ -165,6 +165,7 @@
 
     async function generarCodigoLicencia() {
       const nota = document.getElementById('notaLicencia').value.trim();
+      const duracion = document.getElementById('duracionLicencia').value;
       const msg = document.getElementById('mensajeLicencia');
       msg.style.display = 'none';
       document.getElementById('codigoLicenciaResultado').style.display = 'none';
@@ -172,7 +173,7 @@
       const res = await fetch('/api/generar-codigo-licencia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
-        body: JSON.stringify({ nota })
+        body: JSON.stringify({ nota, duracion })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -263,6 +264,12 @@
       </p>
       <label>Nota (opcional, para tu propio registro)</label>
       <input type="text" id="notaLicencia" placeholder="Ej: Minimarket El Sol">
+      <label>Duración (según lo que haya pagado)</label>
+      <select id="duracionLicencia">
+        <option value="1">1 año</option>
+        <option value="5">5 años</option>
+        <option value="indefinido">Indefinido</option>
+      </select>
       <div id="codigoLicenciaResultado" style="display:none; text-align:center; margin-top:1rem">
         <p style="margin-bottom:0.3rem">Dale este código al local para que lo escriba en su menú "Licencia":</p>
         <div style="font-size:2rem; font-weight:bold; letter-spacing:0.3rem; background:white; padding:0.8rem; border-radius:6px" id="codigoLicenciaTexto"></div>

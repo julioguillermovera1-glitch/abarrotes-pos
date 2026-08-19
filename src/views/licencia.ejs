@@ -13,17 +13,29 @@
 
     <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
 
-    <% if (licencia.activado) { %>
-      <div class="alert alert-success">Este programa ya está activado. ¡Gracias por tu compra!</div>
+    <% if (licencia.activado && vigente) { %>
+      <div class="alert alert-success">
+        Este programa ya está activado. ¡Gracias por tu compra!
+        <% if (licencia.expira_en) { %>
+          Válido hasta <strong><%= new Date(licencia.expira_en).toLocaleDateString('es-CL') %></strong>.
+        <% } else { %>
+          Licencia indefinida — no vence.
+        <% } %>
+      </div>
+    <% } else if (licencia.activado && !vigente) { %>
+      <div class="alert alert-error">
+        Tu licencia venció el <strong><%= new Date(licencia.expira_en).toLocaleDateString('es-CL') %></strong>.
+        Ingresa un código nuevo para renovarla.
+      </div>
     <% } else if (dias > 0) { %>
       <div class="alert">Estás probando el programa gratis — quedan <strong><%= dias %></strong> día<%= dias === 1 ? '' : 's' %>.</div>
     <% } else { %>
       <div class="alert alert-error">La prueba gratis de 7 días terminó. Ingresa un código de activación para seguir usando el programa.</div>
     <% } %>
 
-    <% if (!licencia.activado) { %>
+    <% if (!licencia.activado || !vigente) { %>
       <p style="color:#888; font-size:0.9rem">
-        Cuando compres el programa, te van a dar un código de activación — escríbelo aquí.
+        Cuando compres o renueves el programa, te van a dar un código de activación — escríbelo aquí.
         Este paso necesita internet en el momento de activar (se valida con el panel central).
       </p>
       <form method="POST" action="/licencia/activar" class="modal-contenido" style="width:auto; margin-top:1rem; padding:1.2rem">

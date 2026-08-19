@@ -22,12 +22,16 @@ INSERT IGNORE INTO configuracion (id) VALUES (1);
 -- Fila única con el estado de la prueba gratis de 7 días / activación. El
 -- instalacion_id se genera solo, una vez, la primera vez que arranca el
 -- programa en un local nuevo.
+-- expira_en queda NULL para licencias indefinidas, o con la fecha hasta la
+-- que vale la activación (1 año, 5 años, etc., según lo que haya generado
+-- el panel central para ese código).
 CREATE TABLE IF NOT EXISTS licencia (
   id INT PRIMARY KEY DEFAULT 1,
   instalacion_id VARCHAR(32) NOT NULL,
   fecha_instalacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   activado TINYINT(1) NOT NULL DEFAULT 0,
-  codigo_activacion VARCHAR(32)
+  codigo_activacion VARCHAR(32),
+  expira_en TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (

@@ -207,8 +207,17 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
 // programa una vez que termina la prueba gratis de 7 días. El local lo
 // valida aquí (necesita internet en ese momento), así no se puede generar
 // un código falso sin conocer uno real. Solo tú vendes el producto. ---
+// duracion: '1' (1 año), '5' (5 años), o 'indefinido'.
+const MESES_POR_DURACION = { '1': 12, '5': 60, indefinido: null };
+
 router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) => {
   const nota = (req.body.nota || '').trim() || null;
+  const duracion = req.body.duracion || 'indefinido';
+  if (!(duracion in MESES_POR_DURACION)) {
+    return res.status(400).json({ error: 'Duración inválida' });
+  }
+  const meses = MESES_POR_DURACION[duracion];
+
   const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
   let code;
   do {
@@ -216,7 +225,7 @@ router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) 
     var [existe] = await pool.query('SELECT 1 FROM codigos_activacion WHERE code = ?', [code]);
   } while (existe.length > 0);
 
-  await pool.query('INSERT INTO codigos_activacion (code, nota) VALUES (?, ?)', [code, nota]);
+  await pool.query('INSERT INTO codigos_activacion (code, nota, meses) VALUES (?, ?, ?)', [code, nota, meses]);
   res.json({ codigo: code });
 });
 
@@ -240,7 +249,14 @@ router.post('/api/activar-licencia', limitarActivacion, async (req, res) => {
     'UPDATE codigos_activacion SET usado = 1, instalacion_id = ?, usado_en = NOW() WHERE code = ?',
     [instalacionId, codigo]
   );
-  res.json({ ok: true });
+
+  let expiraEn = null;
+  if (existente.meses) {
+    const fecha = new Date();
+    fecha.setMonth(fecha.getMonth() + existente.meses);
+    expiraEn = fecha.toISOString();
+  }
+  res.json({ ok: true, expira_en: expiraEn });
 });
 
 // --- El local nuevo canjea el código y recibe sus credenciales ---
