@@ -209,8 +209,8 @@ $escritorio = [Environment]::GetFolderPath("Desktop")
 @"
 [InternetShortcut]
 URL=http://localhost:4001
-IconIndex=14
-IconFile=%SystemRoot%\System32\SHELL32.dll
+IconFile=$AppDir\src\public\img\icon.ico
+IconIndex=0
 "@ | Set-Content -Path (Join-Path $escritorio "Abarrotes POS.url") -Encoding ascii
 Write-Host "Acceso directo creado en el escritorio."
 
