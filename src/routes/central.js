@@ -144,7 +144,21 @@ router.get('/dashboard', requireCentralLogin, async (req, res) => {
     return acc;
   }, { ventas_hoy_total: 0, ventas_hoy_count: 0, cuentas_por_pagar_total: 0 });
 
-  res.render('dashboard', { locales: parsed, totales, usuario: req.session.centralUser, esSuperAdmin });
+  let clientes = [];
+  if (esSuperAdmin) {
+    [clientes] = await pool.query("SELECT id, usuario FROM central_admins WHERE rol = 'cliente' ORDER BY usuario");
+  }
+
+  res.render('dashboard', { locales: parsed, totales, usuario: req.session.centralUser, esSuperAdmin, clientes });
+});
+
+// --- Elimina la cuenta de un cliente (no borra sus locales ni sus ventas,
+// solo el acceso al panel — sus locales siguen funcionando igual). ---
+router.post('/api/eliminar-cliente', requireSuperAdmin, async (req, res) => {
+  const clienteId = Number(req.body.cliente_id);
+  if (!clienteId) return res.status(400).json({ error: 'Falta el cliente' });
+  await pool.query("DELETE FROM central_admins WHERE id = ? AND rol = 'cliente'", [clienteId]);
+  res.json({ ok: true });
 });
 
 function safeParse(value, fallback) {

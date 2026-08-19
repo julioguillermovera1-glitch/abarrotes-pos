@@ -203,6 +203,15 @@
       document.getElementById('resultadoClienteTexto').textContent = `Usuario: ${data.usuario}  /  Contraseña: ${data.password}`;
       document.getElementById('resultadoCliente').style.display = 'block';
     }
+    async function eliminarCliente(id, usuario) {
+      if (!confirm(`¿Eliminar el acceso del cliente "${usuario}"? Sus locales van a seguir funcionando, solo pierde el login al panel.`)) return;
+      const res = await fetch('/api/eliminar-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ cliente_id: id })
+      });
+      if (res.ok) location.reload();
+    }
     function cerrarModalCliente() {
       document.getElementById('modalCliente').style.display = 'none';
       document.getElementById('usuarioClienteNuevo').value = '';
@@ -274,6 +283,26 @@
         <button type="button" class="btn btn-secondary" onclick="cerrarModalCliente()">Cerrar</button>
         <button type="button" class="btn btn-primary" onclick="crearCliente()">Crear</button>
       </div>
+
+      <% if (clientes.length > 0) { %>
+        <hr style="margin:1.2rem 0">
+        <p style="font-weight:bold; margin-bottom:0.5rem">Clientes existentes</p>
+        <table class="tabla-datos">
+          <tbody>
+            <% clientes.forEach(c => { %>
+              <tr>
+                <td><%= c.usuario %></td>
+                <td style="text-align:right">
+                  <button type="button" class="btn btn-secondary" onclick="eliminarCliente(<%= c.id %>, '<%= c.usuario %>')">Eliminar</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <p style="color:#888; font-size:0.8rem; margin-top:0.4rem">
+          Eliminar un cliente solo borra su acceso al panel — sus locales siguen funcionando igual.
+        </p>
+      <% } %>
     </div>
   </div>
 
