@@ -57,8 +57,16 @@
         <div class="local-card">
           <div class="local-card-header">
             <h2><%= l.local_nombre %></h2>
-            <span class="local-actualizado">Actualizado: <%= new Date(l.actualizado_en).toLocaleString('es-CL') %></span>
+            <span class="<%= l.conectado ? 'badge-ok' : 'badge-error' %>"><%= l.conectado ? '🟢 Conectado' : '🔴 Sin conexión' %></span>
           </div>
+          <span class="local-actualizado">Última sincronización: <%= new Date(l.actualizado_en).toLocaleString('es-CL') %></span>
+
+          <% if (esSuperAdmin && l.cliente_usuario) { %>
+            <p style="margin:0.4rem 0; font-size:0.9rem; color:#555">
+              Cliente: <strong><%= l.cliente_nombre_contacto || l.cliente_usuario %></strong>
+              <% if (l.cliente_telefono) { %> — 📞 <%= l.cliente_telefono %><% } %>
+            </p>
+          <% } %>
 
           <div class="local-stats">
             <div><strong><%= moneyCL(l.ventas_hoy_total) %></strong><span>Ventas hoy</span></div>
@@ -185,6 +193,8 @@
     async function crearCliente() {
       const usuario = document.getElementById('usuarioClienteNuevo').value.trim();
       const password = document.getElementById('passwordClienteNuevo').value.trim();
+      const nombre_contacto = document.getElementById('nombreContactoClienteNuevo').value.trim();
+      const telefono = document.getElementById('telefonoClienteNuevo').value.trim();
       const msg = document.getElementById('mensajeCliente');
       msg.style.display = 'none';
       document.getElementById('resultadoCliente').style.display = 'none';
@@ -192,7 +202,7 @@
       const res = await fetch('/api/crear-cliente', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
-        body: JSON.stringify({ usuario, password })
+        body: JSON.stringify({ usuario, password, nombre_contacto, telefono })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -216,6 +226,8 @@
       document.getElementById('modalCliente').style.display = 'none';
       document.getElementById('usuarioClienteNuevo').value = '';
       document.getElementById('passwordClienteNuevo').value = '';
+      document.getElementById('nombreContactoClienteNuevo').value = '';
+      document.getElementById('telefonoClienteNuevo').value = '';
       document.getElementById('resultadoCliente').style.display = 'none';
       document.getElementById('mensajeCliente').style.display = 'none';
     }
@@ -274,6 +286,10 @@
       <input type="text" id="usuarioClienteNuevo" placeholder="Ej: minimarketelsol">
       <label>Contraseña (déjalo en blanco para generar una)</label>
       <input type="text" id="passwordClienteNuevo" placeholder="Opcional">
+      <label>Nombre de contacto (para soporte)</label>
+      <input type="text" id="nombreContactoClienteNuevo" placeholder="Ej: Pedro González">
+      <label>Teléfono (para soporte)</label>
+      <input type="text" id="telefonoClienteNuevo" placeholder="Ej: +56 9 1234 5678">
       <div id="resultadoCliente" style="display:none; text-align:center; margin-top:1rem">
         <p style="margin-bottom:0.3rem">Dale estos datos al cliente para que entre a su panel:</p>
         <div style="font-size:1.1rem; font-weight:bold; background:white; padding:0.8rem; border-radius:6px" id="resultadoClienteTexto"></div>
@@ -291,7 +307,12 @@
           <tbody>
             <% clientes.forEach(c => { %>
               <tr>
-                <td><%= c.usuario %></td>
+                <td>
+                  <%= c.usuario %>
+                  <% if (c.nombre_contacto || c.telefono) { %>
+                    <br><span style="color:#888; font-size:0.8rem"><%= c.nombre_contacto || '' %><% if (c.telefono) { %> — 📞 <%= c.telefono %><% } %></span>
+                  <% } %>
+                </td>
                 <td style="text-align:right">
                   <button type="button" class="btn btn-secondary" onclick="eliminarCliente(<%= c.id %>, '<%= c.usuario %>')">Eliminar</button>
                 </td>

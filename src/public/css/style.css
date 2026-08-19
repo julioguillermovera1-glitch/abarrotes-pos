@@ -169,7 +169,9 @@ body.pos-body .navbar { flex: none; }
 .local-card { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.2rem; }
 .local-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.8rem; }
 .local-card-header h2 { margin: 0; }
-.local-actualizado { font-size: 0.78rem; color: #888; }
+.local-actualizado { font-size: 0.78rem; color: #888; display: block; }
+.badge-ok { font-size: 0.78rem; font-weight: 600; color: #1e7e34; white-space: nowrap; }
+.badge-error { font-size: 0.78rem; font-weight: 600; color: #b3261e; white-space: nowrap; }
 .local-stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
 .local-stats div { display: flex; flex-direction: column; }
 .local-stats strong { font-size: 1.2rem; }

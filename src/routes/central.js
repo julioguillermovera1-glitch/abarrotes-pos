@@ -79,11 +79,13 @@ router.post('/api/crear-cliente', requireSuperAdmin, async (req, res) => {
   const [existe] = await pool.query('SELECT 1 FROM central_admins WHERE usuario = ?', [usuario]);
   if (existe.length > 0) return res.status(400).json({ error: 'Ese usuario ya existe' });
 
+  const nombreContacto = (req.body.nombre_contacto || '').trim() || null;
+  const telefono = (req.body.telefono || '').trim() || null;
   const password = req.body.password || generarPasswordSimple();
   const hash = bcrypt.hashSync(password, 10);
   await pool.query(
-    "INSERT INTO central_admins (usuario, password_hash, rol) VALUES (?, ?, 'cliente')",
-    [usuario, hash]
+    "INSERT INTO central_admins (usuario, password_hash, rol, nombre_contacto, telefono) VALUES (?, ?, 'cliente', ?, ?)",
+    [usuario, hash, nombreContacto, telefono]
   );
   res.json({ ok: true, usuario, password });
 });
@@ -122,19 +124,31 @@ router.post('/api/limpiar-locales', requireCentralLogin, async (req, res) => {
   res.redirect('/dashboard');
 });
 
+// Si un local no sincroniza en más de esto, se marca "sin conexión" — el
+// intervalo normal de sincronización es cada 20 min, así que se da margen
+// para no marcar en falso ante una falla pasajera.
+const MINUTOS_SIN_CONEXION = 45;
+
 // --- Panel central: resumen de los locales. super_admin ve los de todos
-// los clientes; un cliente solo ve los suyos propios. ---
+// los clientes (con su nombre y teléfono, para poder darles soporte); un
+// cliente solo ve los suyos propios. ---
 router.get('/dashboard', requireCentralLogin, async (req, res) => {
   const esSuperAdmin = req.session.centralUser.rol === 'super_admin';
   const [locales] = esSuperAdmin
-    ? await pool.query('SELECT * FROM local_status ORDER BY local_nombre')
+    ? await pool.query(
+        `SELECT ls.*, ca.usuario AS cliente_usuario, ca.nombre_contacto AS cliente_nombre_contacto, ca.telefono AS cliente_telefono
+         FROM local_status ls
+         LEFT JOIN central_admins ca ON ca.id = ls.cliente_id
+         ORDER BY ls.local_nombre`
+      )
     : await pool.query('SELECT * FROM local_status WHERE cliente_id = ? ORDER BY local_nombre', [req.session.centralUser.id]);
 
   const parsed = locales.map(l => ({
     ...l,
     top_productos: safeParse(l.top_productos, []),
     bajo_stock: safeParse(l.bajo_stock, []),
-    cuentas_por_pagar: safeParse(l.cuentas_por_pagar, [])
+    cuentas_por_pagar: safeParse(l.cuentas_por_pagar, []),
+    conectado: (Date.now() - new Date(l.actualizado_en).getTime()) < MINUTOS_SIN_CONEXION * 60 * 1000
   }));
 
   const totales = parsed.reduce((acc, l) => {
@@ -146,7 +160,7 @@ router.get('/dashboard', requireCentralLogin, async (req, res) => {
 
   let clientes = [];
   if (esSuperAdmin) {
-    [clientes] = await pool.query("SELECT id, usuario FROM central_admins WHERE rol = 'cliente' ORDER BY usuario");
+    [clientes] = await pool.query("SELECT id, usuario, nombre_contacto, telefono FROM central_admins WHERE rol = 'cliente' ORDER BY usuario");
   }
 
   res.render('dashboard', { locales: parsed, totales, usuario: req.session.centralUser, esSuperAdmin, clientes });

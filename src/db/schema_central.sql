@@ -16,12 +16,15 @@ CREATE TABLE IF NOT EXISTS local_status (
 );
 
 -- rol 'super_admin' ve y administra todos los locales de todos los clientes
--- (tú); rol 'cliente' solo ve y administra los suyos propios.
+-- (tú); rol 'cliente' solo ve y administra los suyos propios. nombre_contacto
+-- y telefono son para poder darle soporte al cliente (no los usa el login).
 CREATE TABLE IF NOT EXISTS central_admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario VARCHAR(50) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  rol ENUM('super_admin','cliente') NOT NULL DEFAULT 'cliente'
+  rol ENUM('super_admin','cliente') NOT NULL DEFAULT 'cliente',
+  nombre_contacto VARCHAR(150),
+  telefono VARCHAR(30)
 );
 
 -- Códigos de emparejamiento de un solo uso, estilo "agregar cámara" de Dahua:
