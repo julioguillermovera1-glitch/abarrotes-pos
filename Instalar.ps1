@@ -27,6 +27,11 @@ function Generar-Clave($largo = 24) {
   -join ((48..57) + (65..90) + (97..122) | Get-Random -Count $largo | ForEach-Object {[char]$_})
 }
 
+# Todo el trabajo real va dentro de este try/catch: si algo falla, la ventana
+# se queda abierta mostrando el error en vez de cerrarse sola (eso fue lo que
+# pasó la vez que este instalador falló sin dejar rastro de por qué).
+try {
+
 Write-Host "=== Instalando Abarrotes POS ===" -ForegroundColor Cyan
 Write-Host "Carpeta del programa: $AppDir`n"
 
@@ -44,36 +49,62 @@ if (-not $node) {
 $nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
 if (-not $nodeExe) { $nodeExe = "C:\Program Files\nodejs\node.exe" }
 if (-not (Test-Path $nodeExe)) {
-  Write-Host "No se pudo confirmar la instalación de Node.js. Cierra esta ventana, abre una nueva PowerShell como Administrador, y vuelve a correr el instalador." -ForegroundColor Red
-  exit 1
+  throw "No se pudo confirmar la instalación de Node.js. Cierra esta ventana, abre una nueva PowerShell como Administrador, y vuelve a correr el instalador."
 }
 
 # --- 2. MariaDB ---
 Write-Host "`n=== 2. MariaDB ===" -ForegroundColor Cyan
+# La clave de root se guarda apenas se genera (ANTES de instalar nada), para
+# que nunca se pierda si algo falla a mitad de camino en un paso posterior.
+# Así el instalador nunca necesita preguntarle nada a nadie (es desatendido).
+$MariaRootKeyDir = Join-Path $env:ProgramData "AbarrotesPOS"
+$MariaRootKeyPath = Join-Path $MariaRootKeyDir "mariadb-root.key"
+
+function Instalar-MariaDBLimpio {
+  $clave = Generar-Clave 20
+  New-Item -ItemType Directory -Force -Path $MariaRootKeyDir | Out-Null
+  Set-Content -Path $MariaRootKeyPath -Value $clave -NoNewline -Encoding ascii
+  Write-Host "Instalando MariaDB 11.4 LTS..."
+  winget install --id MariaDB.Server --version 11.4.3.0 --silent --accept-package-agreements --accept-source-agreements `
+    --override "PASSWORD=$clave SERVICENAME=MariaDB PORT=3306 /qn"
+  Start-Sleep -Seconds 10
+  $svc = Get-Service -Name MariaDB -ErrorAction SilentlyContinue
+  if (-not $svc) {
+    throw "No se detectó el servicio MariaDB después de instalar. Revisa manualmente."
+  }
+  return $clave
+}
+
 $servicioDB = Get-Service -Name MariaDB -ErrorAction SilentlyContinue
 $rootPassword = $null
+
 if (-not $servicioDB) {
-  Write-Host "No está instalado. Instalando MariaDB 11.4 LTS..."
-  $rootPassword = Generar-Clave 20
-  winget install --id MariaDB.Server --version 11.4.3.0 --silent --accept-package-agreements --accept-source-agreements `
-    --override "PASSWORD=$rootPassword SERVICENAME=MariaDB PORT=3306 /qn"
-  Start-Sleep -Seconds 10
-  $servicioDB = Get-Service -Name MariaDB -ErrorAction SilentlyContinue
-  if (-not $servicioDB) {
-    Write-Host "No se detectó el servicio MariaDB después de instalar. Revisa manualmente." -ForegroundColor Red
-    exit 1
-  }
-} else {
-  Write-Host "Ya está instalado."
+  $rootPassword = Instalar-MariaDBLimpio
+} elseif (Test-Path $MariaRootKeyPath) {
+  Write-Host "Ya está instalado (de una instalación anterior con este mismo instalador)."
   if ($servicioDB.Status -ne 'Running') { Start-Service -Name MariaDB }
-  Write-Host "Este computador ya tiene MariaDB — si ya usaste este instalador antes en esta PC, la contraseña de root anterior sigue siendo válida."
+  $rootPassword = Get-Content $MariaRootKeyPath -Raw
+} else {
+  # Hay un servicio MariaDB pero no sabemos su contraseña (instalación previa
+  # que falló a mitad de camino, o instalada manualmente). Reinstalar limpio
+  # es más seguro y simple que quedar pidiendo una contraseña que nadie tiene.
+  Write-Host "Hay MariaDB instalado pero sin contraseña conocida — se reinstala limpio para no quedar bloqueados."
+  Stop-Service -Name MariaDB -Force -ErrorAction SilentlyContinue
+  $paquete = Get-ItemProperty `
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*", `
+    "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" `
+    -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like "MariaDB*" }
+  foreach ($p in $paquete) {
+    Start-Process msiexec.exe -ArgumentList "/X $($p.PSChildName) /quiet /norestart" -Wait
+  }
+  $rootPassword = Instalar-MariaDBLimpio
 }
 
 $mysqlExe = (Get-ChildItem "C:\Program Files\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 if (-not $mysqlExe) {
   $mysqlExe = (Get-ChildItem "C:\Program Files (x86)\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 }
-if (-not $mysqlExe) { Write-Host "No se encontró mysql.exe." -ForegroundColor Red; exit 1 }
+if (-not $mysqlExe) { throw "No se encontró mysql.exe." }
 
 # --- 3. Base de datos y usuario de la aplicación ---
 Write-Host "`n=== 3. Creando la base de datos ===" -ForegroundColor Cyan
@@ -84,12 +115,6 @@ if (Test-Path $envPath) {
   Write-Host "Ya existe un archivo .env — se reutiliza la contraseña de la app que ya tenía."
   $appPassword = (Get-Content $envPath | Select-String '^DB_PASSWORD=(.*)$').Matches.Groups[1].Value
   if (-not $appPassword) { $appPassword = Generar-Clave 24 }
-}
-
-if (-not $rootPassword) {
-  Write-Host "Ingresa la contraseña de root de MariaDB de este computador (la que se generó la primera vez que se instaló):"
-  $rootPasswordSecure = Read-Host -AsSecureString
-  $rootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPasswordSecure))
 }
 
 $sqlSetup = @"
@@ -203,3 +228,16 @@ if ($rootPassword) {
 }
 Write-Host "El programa va a abrirse solo la próxima vez que se prenda este computador."
 Write-Host "Los respaldos quedan en: $AppDir\backups"
+
+} catch {
+  Write-Host "`n`n=== LA INSTALACIÓN FALLÓ ===" -ForegroundColor Red
+  Write-Host $_.Exception.Message -ForegroundColor Red
+  Write-Host "`nDetalle técnico:" -ForegroundColor DarkGray
+  Write-Host $_.InvocationInfo.PositionMessage -ForegroundColor DarkGray
+  Write-Host "`nManda una captura de todo este mensaje para que se pueda corregir." -ForegroundColor Yellow
+  Write-Host "Esta ventana se va a cerrar sola en 60 segundos (o cierra cuando quieras, ya se leyó el error)." -ForegroundColor Yellow
+  Start-Sleep -Seconds 60
+  exit 1
+}
+
+Start-Sleep -Seconds 5
