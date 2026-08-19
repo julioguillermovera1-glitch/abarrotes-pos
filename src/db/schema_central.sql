@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS local_status (
   local_id VARCHAR(50) PRIMARY KEY,
   local_nombre VARCHAR(150) NOT NULL,
+  cliente_id INT,
   actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   ventas_hoy_total DECIMAL(12,2) NOT NULL DEFAULT 0,
   ventas_hoy_count INT NOT NULL DEFAULT 0,
@@ -14,17 +15,24 @@ CREATE TABLE IF NOT EXISTS local_status (
   cuentas_por_pagar JSON
 );
 
+-- rol 'super_admin' ve y administra todos los locales de todos los clientes
+-- (tú); rol 'cliente' solo ve y administra los suyos propios.
 CREATE TABLE IF NOT EXISTS central_admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario VARCHAR(50) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL
+  password_hash VARCHAR(255) NOT NULL,
+  rol ENUM('super_admin','cliente') NOT NULL DEFAULT 'cliente'
 );
 
 -- Códigos de emparejamiento de un solo uso, estilo "agregar cámara" de Dahua:
 -- el panel genera un código corto + QR, el local nuevo lo canjea una vez.
+-- cliente_id queda fijo con quien generó el código, y se copia a
+-- local_credentials/local_status al canjearse y sincronizar, para que el
+-- local nuevo quede asociado al cliente correcto automáticamente.
 CREATE TABLE IF NOT EXISTS pairing_codes (
   code VARCHAR(10) PRIMARY KEY,
   local_nombre_sugerido VARCHAR(150) NOT NULL,
+  cliente_id INT,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expira_en TIMESTAMP NOT NULL,
   usado TINYINT(1) NOT NULL DEFAULT 0,
@@ -37,6 +45,7 @@ CREATE TABLE IF NOT EXISTS local_credentials (
   local_id VARCHAR(50) PRIMARY KEY,
   secret VARCHAR(64) NOT NULL,
   local_nombre VARCHAR(150) NOT NULL,
+  cliente_id INT,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

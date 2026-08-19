@@ -27,13 +27,16 @@
 
   <main class="content">
     <div class="content-header">
-      <h1>Resumen de todos los locales</h1>
+      <h1><%= esSuperAdmin ? 'Resumen de todos los locales' : 'Resumen de tus locales' %></h1>
       <div style="display:flex; gap:0.6rem">
-        <form method="POST" action="/api/limpiar-locales" onsubmit="return confirm('¿Desconectar TODOS los locales del panel? Cada uno deberá emparejarse de nuevo con un código.')">
+        <form method="POST" action="/api/limpiar-locales" onsubmit="return confirm('<%= esSuperAdmin ? '¿Desconectar TODOS los locales del panel (de todos los clientes)? Cada uno deberá emparejarse de nuevo con un código.' : '¿Desconectar tus locales? Cada uno deberá emparejarse de nuevo con un código.' %>')">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <button type="submit" class="btn btn-secondary">🧹 Desconectar todos los locales</button>
+          <button type="submit" class="btn btn-secondary">🧹 <%= esSuperAdmin ? 'Desconectar todos los locales' : 'Desconectar mis locales' %></button>
         </form>
-        <button class="btn btn-secondary" onclick="document.getElementById('modalLicencia').style.display='flex'">🔑 Generar código de activación</button>
+        <% if (esSuperAdmin) { %>
+          <button class="btn btn-secondary" onclick="document.getElementById('modalCliente').style.display='flex'">👤 Agregar cliente</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('modalLicencia').style.display='flex'">🔑 Generar código de activación</button>
+        <% } %>
         <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
       </div>
     </div>
@@ -179,6 +182,35 @@
       document.getElementById('mensajeLicencia').style.display = 'none';
     }
 
+    async function crearCliente() {
+      const usuario = document.getElementById('usuarioClienteNuevo').value.trim();
+      const password = document.getElementById('passwordClienteNuevo').value.trim();
+      const msg = document.getElementById('mensajeCliente');
+      msg.style.display = 'none';
+      document.getElementById('resultadoCliente').style.display = 'none';
+
+      const res = await fetch('/api/crear-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ usuario, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error;
+        msg.style.display = 'block';
+        return;
+      }
+      document.getElementById('resultadoClienteTexto').textContent = `Usuario: ${data.usuario}  /  Contraseña: ${data.password}`;
+      document.getElementById('resultadoCliente').style.display = 'block';
+    }
+    function cerrarModalCliente() {
+      document.getElementById('modalCliente').style.display = 'none';
+      document.getElementById('usuarioClienteNuevo').value = '';
+      document.getElementById('passwordClienteNuevo').value = '';
+      document.getElementById('resultadoCliente').style.display = 'none';
+      document.getElementById('mensajeCliente').style.display = 'none';
+    }
+
     async function cambiarPassword() {
       const password_actual = document.getElementById('passwordActual').value;
       const password_nueva = document.getElementById('passwordNueva').value;
@@ -218,6 +250,29 @@
       <div class="modal-botones">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalLicencia()">Cerrar</button>
         <button type="button" class="btn btn-primary" onclick="generarCodigoLicencia()">Generar código</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCliente" class="modal">
+    <div class="modal-contenido">
+      <h2>Agregar cliente</h2>
+      <p style="color:#888; font-size:0.9rem">
+        Crea un usuario para que un cliente entre a su propio panel — solo va a ver y administrar
+        sus propios locales, nunca los de otros clientes ni los tuyos.
+      </p>
+      <label>Usuario</label>
+      <input type="text" id="usuarioClienteNuevo" placeholder="Ej: minimarketelsol">
+      <label>Contraseña (déjalo en blanco para generar una)</label>
+      <input type="text" id="passwordClienteNuevo" placeholder="Opcional">
+      <div id="resultadoCliente" style="display:none; text-align:center; margin-top:1rem">
+        <p style="margin-bottom:0.3rem">Dale estos datos al cliente para que entre a su panel:</p>
+        <div style="font-size:1.1rem; font-weight:bold; background:white; padding:0.8rem; border-radius:6px" id="resultadoClienteTexto"></div>
+      </div>
+      <div id="mensajeCliente" class="alert alert-error" style="display:none; margin-top:1rem"></div>
+      <div class="modal-botones">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalCliente()">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="crearCliente()">Crear</button>
       </div>
     </div>
   </div>

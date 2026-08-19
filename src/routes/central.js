@@ -31,6 +31,17 @@ function requireCentralLogin(req, res, next) {
   next();
 }
 
+// Solo tú (super_admin) administras la venta del producto en sí: generar
+// códigos de activación y crear cuentas de cliente nuevas. Un cliente solo
+// administra sus propios locales.
+function requireSuperAdmin(req, res, next) {
+  if (!req.session.centralUser) return res.redirect('/login');
+  if (req.session.centralUser.rol !== 'super_admin') {
+    return res.status(403).send('Acceso solo para el administrador del sistema');
+  }
+  next();
+}
+
 // --- Login del panel central ---
 router.get('/login', (req, res) => {
   if (req.session.centralUser) return res.redirect('/dashboard');
@@ -44,13 +55,37 @@ router.post('/login', limitarLogin, async (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.render('central_login', { error: 'Usuario o contraseña incorrectos' });
   }
-  req.session.centralUser = { id: user.id, usuario: user.usuario };
+  req.session.centralUser = { id: user.id, usuario: user.usuario, rol: user.rol };
   req.session.passwordPorDefecto = user.usuario === 'admin' && password === 'admin123';
   res.redirect('/dashboard');
 });
 
 router.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
+});
+
+function generarPasswordSimple() {
+  const alfabeto = 'abcdefghjkmnpqrstuvwxyz23456789'; // sin 0/o ni 1/l/i para evitar confusión
+  return Array.from({ length: 8 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('');
+}
+
+// --- Crea una cuenta de cliente nueva (solo tú, super_admin): el cliente
+// entra con esto y solo ve/administra sus propios locales, nunca los de
+// otros clientes ni los tuyos. ---
+router.post('/api/crear-cliente', requireSuperAdmin, async (req, res) => {
+  const usuario = (req.body.usuario || '').trim();
+  if (!usuario) return res.status(400).json({ error: 'Falta el nombre de usuario' });
+
+  const [existe] = await pool.query('SELECT 1 FROM central_admins WHERE usuario = ?', [usuario]);
+  if (existe.length > 0) return res.status(400).json({ error: 'Ese usuario ya existe' });
+
+  const password = req.body.password || generarPasswordSimple();
+  const hash = bcrypt.hashSync(password, 10);
+  await pool.query(
+    "INSERT INTO central_admins (usuario, password_hash, rol) VALUES (?, ?, 'cliente')",
+    [usuario, hash]
+  );
+  res.json({ ok: true, usuario, password });
 });
 
 // --- Cambiar la contraseña del propio admin del panel central ---
@@ -69,18 +104,31 @@ router.post('/api/cambiar-password', requireCentralLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Desconecta todos los locales del panel (para dejarlo en blanco antes de
-// entregar un local/instalador nuevo, sin datos de prueba pegados). ---
+// --- Desconecta locales del panel (para dejarlos en blanco antes de
+// entregar un local/instalador nuevo, sin datos de prueba pegados).
+// super_admin desconecta TODO el panel; un cliente solo desconecta los
+// locales que son suyos. ---
 router.post('/api/limpiar-locales', requireCentralLogin, async (req, res) => {
-  await pool.query('DELETE FROM local_status');
-  await pool.query('DELETE FROM local_credentials');
-  await pool.query('DELETE FROM pairing_codes');
+  if (req.session.centralUser.rol === 'super_admin') {
+    await pool.query('DELETE FROM local_status');
+    await pool.query('DELETE FROM local_credentials');
+    await pool.query('DELETE FROM pairing_codes');
+  } else {
+    const clienteId = req.session.centralUser.id;
+    await pool.query('DELETE FROM local_status WHERE cliente_id = ?', [clienteId]);
+    await pool.query('DELETE FROM local_credentials WHERE cliente_id = ?', [clienteId]);
+    await pool.query('DELETE FROM pairing_codes WHERE cliente_id = ?', [clienteId]);
+  }
   res.redirect('/dashboard');
 });
 
-// --- Panel central: resumen de todos los locales ---
+// --- Panel central: resumen de los locales. super_admin ve los de todos
+// los clientes; un cliente solo ve los suyos propios. ---
 router.get('/dashboard', requireCentralLogin, async (req, res) => {
-  const [locales] = await pool.query('SELECT * FROM local_status ORDER BY local_nombre');
+  const esSuperAdmin = req.session.centralUser.rol === 'super_admin';
+  const [locales] = esSuperAdmin
+    ? await pool.query('SELECT * FROM local_status ORDER BY local_nombre')
+    : await pool.query('SELECT * FROM local_status WHERE cliente_id = ? ORDER BY local_nombre', [req.session.centralUser.id]);
 
   const parsed = locales.map(l => ({
     ...l,
@@ -96,7 +144,7 @@ router.get('/dashboard', requireCentralLogin, async (req, res) => {
     return acc;
   }, { ventas_hoy_total: 0, ventas_hoy_count: 0, cuentas_por_pagar_total: 0 });
 
-  res.render('dashboard', { locales: parsed, totales, usuario: req.session.centralUser });
+  res.render('dashboard', { locales: parsed, totales, usuario: req.session.centralUser, esSuperAdmin });
 });
 
 function safeParse(value, fallback) {
@@ -105,7 +153,9 @@ function safeParse(value, fallback) {
   try { return JSON.parse(value); } catch { return fallback; }
 }
 
-// --- Generar código de emparejamiento para un local nuevo (como agregar una cámara Dahua) ---
+// --- Generar código de emparejamiento para un local nuevo (como agregar una
+// cámara Dahua). Queda asociado a quien lo generó, así el local nuevo
+// aparece automáticamente en el panel del cliente correcto (o el tuyo). ---
 router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
   const nombre = (req.body.local_nombre || '').trim() || 'Nuevo local';
   const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
@@ -116,9 +166,9 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
   } while (existe.length > 0);
 
   await pool.query(
-    `INSERT INTO pairing_codes (code, local_nombre_sugerido, expira_en)
-     VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))`,
-    [code, nombre]
+    `INSERT INTO pairing_codes (code, local_nombre_sugerido, cliente_id, expira_en)
+     VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))`,
+    [code, nombre, req.session.centralUser.id]
   );
 
   const qrDataUrl = await QRCode.toDataURL(code, { width: 260, margin: 1 });
@@ -128,8 +178,8 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
 // --- Genera un código de activación de un solo uso, para vender el
 // programa una vez que termina la prueba gratis de 7 días. El local lo
 // valida aquí (necesita internet en ese momento), así no se puede generar
-// un código falso sin conocer uno real. ---
-router.post('/api/generar-codigo-licencia', requireCentralLogin, async (req, res) => {
+// un código falso sin conocer uno real. Solo tú vendes el producto. ---
+router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) => {
   const nota = (req.body.nota || '').trim() || null;
   const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
   let code;
@@ -182,8 +232,8 @@ router.post('/api/pair', async (req, res) => {
   const secret = crypto.randomBytes(24).toString('hex');
 
   await pool.query(
-    'INSERT INTO local_credentials (local_id, secret, local_nombre) VALUES (?, ?, ?)',
-    [localId, secret, pairing.local_nombre_sugerido]
+    'INSERT INTO local_credentials (local_id, secret, local_nombre, cliente_id) VALUES (?, ?, ?, ?)',
+    [localId, secret, pairing.local_nombre_sugerido, pairing.cliente_id]
   );
   await pool.query(
     'UPDATE pairing_codes SET usado = 1, local_id = ?, sync_secret = ? WHERE code = ?',
@@ -209,7 +259,7 @@ router.post('/api/sync', async (req, res) => {
     return res.status(401).json({ error: 'Falta clave de sincronización' });
   }
 
-  const [[cred]] = await pool.query('SELECT secret FROM local_credentials WHERE local_id = ?', [local_id]);
+  const [[cred]] = await pool.query('SELECT secret, cliente_id FROM local_credentials WHERE local_id = ?', [local_id]);
   const autorizado = cred ? key === cred.secret : key === process.env.SYNC_SECRET; // respaldo para configuración manual
   if (!autorizado) {
     return res.status(401).json({ error: 'Clave de sincronización inválida' });
@@ -223,10 +273,11 @@ router.post('/api/sync', async (req, res) => {
 
   await pool.query(
     `INSERT INTO local_status
-       (local_id, local_nombre, ventas_hoy_total, ventas_hoy_count, top_productos, bajo_stock, cuentas_por_pagar_total, cuentas_por_pagar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       (local_id, local_nombre, cliente_id, ventas_hoy_total, ventas_hoy_count, top_productos, bajo_stock, cuentas_por_pagar_total, cuentas_por_pagar)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        local_nombre = VALUES(local_nombre),
+       cliente_id = VALUES(cliente_id),
        ventas_hoy_total = VALUES(ventas_hoy_total),
        ventas_hoy_count = VALUES(ventas_hoy_count),
        top_productos = VALUES(top_productos),
@@ -234,7 +285,7 @@ router.post('/api/sync', async (req, res) => {
        cuentas_por_pagar_total = VALUES(cuentas_por_pagar_total),
        cuentas_por_pagar = VALUES(cuentas_por_pagar)`,
     [
-      local_id, local_nombre,
+      local_id, local_nombre, (cred && cred.cliente_id) || null,
       ventas_hoy_total || 0, ventas_hoy_count || 0,
       JSON.stringify(top_productos || []), JSON.stringify(bajo_stock || []),
       cuentas_por_pagar_total || 0, JSON.stringify(cuentas_por_pagar || [])
