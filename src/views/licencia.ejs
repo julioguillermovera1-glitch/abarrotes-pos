@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Licencia — <%= nombreLocal %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'licencia' }) %>
+
+  <main class="content" style="max-width:520px">
+    <h1>🔑 Licencia</h1>
+
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+    <% if (licencia.activado) { %>
+      <div class="alert alert-success">Este programa ya está activado. ¡Gracias por tu compra!</div>
+    <% } else if (dias > 0) { %>
+      <div class="alert">Estás probando el programa gratis — quedan <strong><%= dias %></strong> día<%= dias === 1 ? '' : 's' %>.</div>
+    <% } else { %>
+      <div class="alert alert-error">La prueba gratis de 7 días terminó. Ingresa un código de activación para seguir usando el programa.</div>
+    <% } %>
+
+    <% if (!licencia.activado) { %>
+      <p style="color:#888; font-size:0.9rem">
+        Cuando compres el programa, te van a dar un código de activación — escríbelo aquí.
+        Este paso necesita internet en el momento de activar (se valida con el panel central).
+      </p>
+      <form method="POST" action="/licencia/activar" class="modal-contenido" style="width:auto; margin-top:1rem; padding:1.2rem">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>Código de activación</label>
+        <input type="text" name="codigo" placeholder="Ej: AB12CD" required autofocus>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Activar</button>
+      </form>
+    <% } %>
+
+    <p style="color:#aaa; font-size:0.8rem; margin-top:1.5rem">
+      ID de esta instalación (por si necesitas soporte): <%= licencia.instalacion_id %>
+    </p>
+  </main>
+</body>
+</html>

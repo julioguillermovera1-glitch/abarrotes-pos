@@ -10,6 +10,7 @@
       <a href="/reportes" class="<%= typeof active !== 'undefined' && active === 'reportes' ? 'active' : '' %>">Reportes</a>
       <a href="/usuarios" class="<%= typeof active !== 'undefined' && active === 'usuarios' ? 'active' : '' %>">Usuarios</a>
       <a href="/configuracion" class="<%= typeof active !== 'undefined' && active === 'configuracion' ? 'active' : '' %>">Configuración</a>
+      <a href="/licencia" class="<%= typeof active !== 'undefined' && active === 'licencia' ? 'active' : '' %>">Licencia</a>
     <% } %>
   </div>
   <div class="navbar-user">
@@ -26,5 +27,12 @@
   <div class="alert alert-error" style="margin:1rem 1.5rem 0; border-radius:6px">
     ⚠️ Estás usando la contraseña por defecto (admin123). Cámbiala ahora en
     <a href="/usuarios">Usuarios → Restablecer contraseña</a> — es de conocimiento público porque está en el código fuente.
+  </div>
+<% } %>
+
+<% if (typeof diasPruebaRestantes !== 'undefined') { %>
+  <div class="alert" style="margin:1rem 1.5rem 0; border-radius:6px">
+    ⏳ Quedan <strong><%= diasPruebaRestantes %></strong> día<%= diasPruebaRestantes === 1 ? '' : 's' %> de prueba gratis.
+    <a href="/licencia">Ver cómo activar</a>.
   </div>
 <% } %>

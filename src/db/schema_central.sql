@@ -39,3 +39,16 @@ CREATE TABLE IF NOT EXISTS local_credentials (
   local_nombre VARCHAR(150) NOT NULL,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Códigos de activación (de un solo uso) para desbloquear un local después
+-- de los 7 días de prueba gratis. El local necesita internet en el momento
+-- de activar: el código se valida aquí, no con una fórmula local, para que
+-- no se pueda generar uno falso sin conocer el código real.
+CREATE TABLE IF NOT EXISTS codigos_activacion (
+  code VARCHAR(10) PRIMARY KEY,
+  nota VARCHAR(150),
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  usado TINYINT(1) NOT NULL DEFAULT 0,
+  instalacion_id VARCHAR(32),
+  usado_en TIMESTAMP NULL
+);

@@ -15,7 +15,7 @@ function emitirToken(req, res, next) {
 // Rutas que reciben peticiones de otros servidores (no de un navegador con
 // sesión), autenticadas por su propio mecanismo (clave de sincronización,
 // código de emparejamiento). No tiene sentido pedirles token CSRF.
-const RUTAS_PUBLICAS = ['/api/sync', '/api/pair'];
+const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia'];
 
 function verificarToken(req, res, next) {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();

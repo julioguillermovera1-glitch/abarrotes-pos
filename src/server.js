@@ -59,6 +59,8 @@ if (APP_MODE === 'central') {
   const setupRoutes = require('./routes/setup');
   const usuariosRoutes = require('./routes/usuarios');
   const configuracionRoutes = require('./routes/configuracion');
+  const { router: licenciaRoutes } = require('./routes/licencia');
+  const { verificarLicencia } = require('./middleware/licencia');
   const { router: cajaRoutes } = require('./routes/caja');
   const pool = require('./db/pool');
 
@@ -74,6 +76,8 @@ if (APP_MODE === 'central') {
 
   app.get('/', (req, res) => res.redirect('/ventas'));
   app.use(authRoutes);
+  app.use(licenciaRoutes);
+  app.use(verificarLicencia);
   app.use(ventasRoutes);
   app.use(inventarioRoutes);
   app.use(clientesRoutes);

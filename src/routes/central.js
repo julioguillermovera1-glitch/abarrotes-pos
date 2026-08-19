@@ -15,6 +15,17 @@ const limitarLogin = rateLimit({
   message: 'Demasiados intentos de inicio de sesión. Espera unos minutos e intenta de nuevo.'
 });
 
+// Evita que alguien intente adivinar códigos de activación probando muchos
+// a la fuerza (el endpoint es público a propósito, para que el POS local
+// pueda llamarlo sin haber iniciado sesión en el panel central).
+const limitarActivacion = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+});
+
 function requireCentralLogin(req, res, next) {
   if (!req.session.centralUser) return res.redirect('/login');
   next();
@@ -112,6 +123,46 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
 
   const qrDataUrl = await QRCode.toDataURL(code, { width: 260, margin: 1 });
   res.json({ code, qr: qrDataUrl, nombre });
+});
+
+// --- Genera un código de activación de un solo uso, para vender el
+// programa una vez que termina la prueba gratis de 7 días. El local lo
+// valida aquí (necesita internet en ese momento), así no se puede generar
+// un código falso sin conocer uno real. ---
+router.post('/api/generar-codigo-licencia', requireCentralLogin, async (req, res) => {
+  const nota = (req.body.nota || '').trim() || null;
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
+  let code;
+  do {
+    code = Array.from({ length: 6 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('');
+    var [existe] = await pool.query('SELECT 1 FROM codigos_activacion WHERE code = ?', [code]);
+  } while (existe.length > 0);
+
+  await pool.query('INSERT INTO codigos_activacion (code, nota) VALUES (?, ?)', [code, nota]);
+  res.json({ codigo: code });
+});
+
+// --- El local canjea el código para activarse (llamado desde /licencia/activar). ---
+router.post('/api/activar-licencia', limitarActivacion, async (req, res) => {
+  const codigo = (req.body.code || '').trim().toUpperCase();
+  const instalacionId = (req.body.instalacion_id || '').trim();
+  if (!codigo || !instalacionId) {
+    return res.status(400).json({ error: 'Falta el código o el ID de instalación' });
+  }
+
+  const [[existente]] = await pool.query('SELECT * FROM codigos_activacion WHERE code = ?', [codigo]);
+  if (!existente) {
+    return res.status(400).json({ error: 'Ese código no existe.' });
+  }
+  if (existente.usado) {
+    return res.status(400).json({ error: 'Ese código ya fue usado.' });
+  }
+
+  await pool.query(
+    'UPDATE codigos_activacion SET usado = 1, instalacion_id = ?, usado_en = NOW() WHERE code = ?',
+    [instalacionId, codigo]
+  );
+  res.json({ ok: true });
 });
 
 // --- El local nuevo canjea el código y recibe sus credenciales ---

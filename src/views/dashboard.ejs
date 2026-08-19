@@ -33,6 +33,7 @@
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="btn btn-secondary">🧹 Desconectar todos los locales</button>
         </form>
+        <button class="btn btn-secondary" onclick="document.getElementById('modalLicencia').style.display='flex'">🔑 Generar código de activación</button>
         <button class="btn btn-primary" onclick="document.getElementById('modalNuevoLocal').style.display='flex'">+ Agregar local nuevo</button>
       </div>
     </div>
@@ -151,6 +152,33 @@
       document.getElementById('nombreLocalNuevo').value = '';
     }
 
+    async function generarCodigoLicencia() {
+      const nota = document.getElementById('notaLicencia').value.trim();
+      const msg = document.getElementById('mensajeLicencia');
+      msg.style.display = 'none';
+      document.getElementById('codigoLicenciaResultado').style.display = 'none';
+
+      const res = await fetch('/api/generar-codigo-licencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ nota })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error;
+        msg.style.display = 'block';
+        return;
+      }
+      document.getElementById('codigoLicenciaTexto').textContent = data.codigo;
+      document.getElementById('codigoLicenciaResultado').style.display = 'block';
+    }
+    function cerrarModalLicencia() {
+      document.getElementById('modalLicencia').style.display = 'none';
+      document.getElementById('notaLicencia').value = '';
+      document.getElementById('codigoLicenciaResultado').style.display = 'none';
+      document.getElementById('mensajeLicencia').style.display = 'none';
+    }
+
     async function cambiarPassword() {
       const password_actual = document.getElementById('passwordActual').value;
       const password_nueva = document.getElementById('passwordNueva').value;
@@ -172,6 +200,27 @@
       location.reload();
     }
   </script>
+
+  <div id="modalLicencia" class="modal">
+    <div class="modal-contenido">
+      <h2>Generar código de activación</h2>
+      <p style="color:#888; font-size:0.9rem">
+        Genera un código de un solo uso para vender el programa a un local cuya prueba gratis
+        de 7 días terminó. El local lo valida aquí mismo al activarlo (necesita internet en ese momento).
+      </p>
+      <label>Nota (opcional, para tu propio registro)</label>
+      <input type="text" id="notaLicencia" placeholder="Ej: Minimarket El Sol">
+      <div id="codigoLicenciaResultado" style="display:none; text-align:center; margin-top:1rem">
+        <p style="margin-bottom:0.3rem">Dale este código al local para que lo escriba en su menú "Licencia":</p>
+        <div style="font-size:2rem; font-weight:bold; letter-spacing:0.3rem; background:white; padding:0.8rem; border-radius:6px" id="codigoLicenciaTexto"></div>
+      </div>
+      <div id="mensajeLicencia" class="alert alert-error" style="display:none; margin-top:1rem"></div>
+      <div class="modal-botones">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalLicencia()">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="generarCodigoLicencia()">Generar código</button>
+      </div>
+    </div>
+  </div>
 
   <div id="modalCambiarPassword" class="modal">
     <div class="modal-contenido">
