@@ -45,3 +45,25 @@ Si quieres conectar este local al panel central (para que el dueño vea
 las ventas de todas las tiendas), entra al programa y ve a
 "🔗 Panel central" en el menú, con el código que te dé el dueño desde
 su panel.
+
+CONECTAR VARIOS PUESTOS/CAJAS AL MISMO COMPUTADOR
+--------------------------------------------------
+Solo UN computador (el "servidor") necesita tener AbarrotesPOS instalado.
+Los demás puestos NO necesitan instalar nada — solo un navegador.
+
+1. Al terminar la instalación, el instalador muestra una dirección como
+   http://192.168.1.XX:4001 — anótala. Si la olvidas, en el computador
+   servidor abre una ventana de "Símbolo del sistema" y escribe
+   "ipconfig", busca la línea "Dirección IPv4".
+2. En cada puesto adicional, conecta el computador a la misma red
+   (WiFi o cable) que el servidor, abre un navegador, y entra a esa
+   misma dirección.
+3. Crea un usuario distinto para cada vendedora en el menú "Usuarios",
+   así cada venta queda asociada a quien la hizo.
+
+Notas:
+- El computador servidor debe estar prendido y con el programa abierto
+  para que los demás puestos puedan usarlo.
+- Si el router asigna una IP nueva cada cierto tiempo, los otros puestos
+  van a dejar de conectarse — pídele a quien instaló el router que le
+  fije ("reserve") una IP fija a este computador.

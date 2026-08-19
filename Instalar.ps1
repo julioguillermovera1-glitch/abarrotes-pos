@@ -203,6 +203,14 @@ $configBackup = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdle
 Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadorBackup -Settings $configBackup -Description "Respaldo diario de la base de datos de Abarrotes POS" -Force | Out-Null
 Write-Host "Respaldo programado todas las noches a las 23:30."
 
+# --- 8b. Permitir conexiones desde otros puestos en la misma red local ---
+Write-Host "`n=== 8b. Habilitando acceso desde otros puestos en la red ===" -ForegroundColor Cyan
+$reglaFirewall = "AbarrotesPOS-Puerto4001"
+if (-not (Get-NetFirewallRule -DisplayName $reglaFirewall -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -DisplayName $reglaFirewall -Direction Inbound -Protocol TCP -LocalPort 4001 -Action Allow | Out-Null
+}
+Write-Host "Puerto 4001 habilitado en el firewall. Otros computadores de la misma red ya pueden conectarse."
+
 # --- 9. Acceso directo en el escritorio ---
 # Un .lnk con una URL como destino no es confiable en Windows (espera un
 # programa/archivo, no una URL) — se usa un .url (acceso directo a internet),
@@ -231,6 +239,14 @@ if ($rootPassword) {
 }
 Write-Host "El programa va a abrirse solo la próxima vez que se prenda este computador."
 Write-Host "Los respaldos quedan en: $AppDir\backups"
+
+$ipLocal = (Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp,Manual -ErrorAction SilentlyContinue |
+  Where-Object { $_.IPAddress -notlike "169.254.*" } | Select-Object -First 1 -ExpandProperty IPAddress)
+if ($ipLocal) {
+  Write-Host "`nPara usar otros puestos/cajas conectados a este mismo computador, en cada uno abre un navegador y entra a:" -ForegroundColor Cyan
+  Write-Host "  http://${ipLocal}:4001" -ForegroundColor Green
+  Write-Host "(Los dos computadores deben estar en la misma red WiFi o cable. Si esta IP cambia con el tiempo, conviene fijarla en el router.)"
+}
 
 } catch {
   Write-Host "`n`n=== LA INSTALACIÓN FALLÓ ===" -ForegroundColor Red
