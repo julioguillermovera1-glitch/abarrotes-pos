@@ -1,4 +1,4 @@
-// Respaldo diario de la base de datos local. Pensado para correr solo,
+﻿// Respaldo diario de la base de datos local. Pensado para correr solo,
 // disparado por una tarea programada de Windows (ver scripts/instalar-backup.ps1).
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });

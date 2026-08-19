@@ -1,4 +1,4 @@
-// Borra todos los datos de prueba/uso de un local (productos, ventas, clientes,
+﻿// Borra todos los datos de prueba/uso de un local (productos, ventas, clientes,
 // vendedoras, turnos, categorías, proveedores) y deja una única cuenta
 // administrador con las credenciales por defecto, lista para entregar a un
 // cliente nuevo como instalación limpia.

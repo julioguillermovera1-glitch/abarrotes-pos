@@ -1,4 +1,4 @@
-# Instalador de Abarrotes POS para un local nuevo.
+﻿# Instalador de Abarrotes POS para un local nuevo.
 #
 # USO: copia toda esta carpeta (AbarrotesPOS) al computador del local nuevo,
 # luego abre PowerShell como Administrador dentro de esa carpeta y ejecuta:

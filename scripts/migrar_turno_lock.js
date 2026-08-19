@@ -1,4 +1,4 @@
-const pool = require('../src/db/pool');
+﻿const pool = require('../src/db/pool');
 
 (async () => {
   await pool.query(`CREATE TABLE IF NOT EXISTS turno_lock (id INT PRIMARY KEY DEFAULT 1)`);

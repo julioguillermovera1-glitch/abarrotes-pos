@@ -1,4 +1,4 @@
-# Actualiza MariaDB de la version vieja (5.5, del 2012) a una version moderna
+﻿# Actualiza MariaDB de la version vieja (5.5, del 2012) a una version moderna
 # con soporte (11.4 LTS), migrando los datos actuales.
 #
 # USO: Abre PowerShell como Administrador (clic derecho -> "Ejecutar como administrador")

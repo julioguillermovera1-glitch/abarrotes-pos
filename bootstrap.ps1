@@ -1,4 +1,4 @@
-# Descarga la ultima version de Abarrotes POS desde GitHub y corre el
+﻿# Descarga la ultima version de Abarrotes POS desde GitHub y corre el
 # instalador. Pensado para ejecutarse ya con permisos de Administrador
 # (Instalar.bat se encarga de eso antes de llegar aqui).
 
