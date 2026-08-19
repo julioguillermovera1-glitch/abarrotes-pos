@@ -61,7 +61,7 @@ Filename: "powershell.exe"; \
 [UninstallRun]
 ; Limpieza al desinstalar: para el programa y quita las tareas programadas.
 Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -Command ""Unregister-ScheduledTask -TaskName 'AbarrotesPOS-Servidor' -Confirm:$false -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName 'AbarrotesPOS-BackupDiario' -Confirm:$false -ErrorAction SilentlyContinue; Get-Process node -ErrorAction SilentlyContinue | Where-Object {{$_.Path -like '*AbarrotesPOS*'}} | Stop-Process -Force -ErrorAction SilentlyContinue"""; \
+  Parameters: "-NoProfile -Command ""Unregister-ScheduledTask -TaskName 'AbarrotesPOS-Servidor' -Confirm:$false -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName 'AbarrotesPOS-Vigilante' -Confirm:$false -ErrorAction SilentlyContinue; Unregister-ScheduledTask -TaskName 'AbarrotesPOS-BackupDiario' -Confirm:$false -ErrorAction SilentlyContinue; Get-Process node -ErrorAction SilentlyContinue | Where-Object {{$_.Path -like '*AbarrotesPOS*'}} | Stop-Process -Force -ErrorAction SilentlyContinue"""; \
   Flags: runhidden waituntilterminated; RunOnceId: "QuitarTareasProgramadas"
 
 [Code]

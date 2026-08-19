@@ -41,11 +41,34 @@ buena conexión a internet en ese momento):
 
 Después de instalado:
 - El programa se abre solo cada vez que se prende el computador.
-- Todas las noches a las 23:30 se hace un respaldo automático de la
-  base de datos (queda guardado en la carpeta "backups" dentro de la
-  carpeta AbarrotesPOS).
+- Todas las noches a las 23:30, y también cada vez que se prenda el
+  computador, se hace un respaldo automático de la base de datos (queda
+  guardado en la carpeta "backups" dentro de la carpeta AbarrotesPOS,
+  se conservan los últimos 30 días).
+- Si el programa se cae solo (se cierra o deja de responder), se revisa
+  cada 5 minutos y se reinicia automáticamente, sin que nadie tenga que
+  hacer nada. Si es el servicio de MariaDB el que se cae, Windows lo
+  reinicia solo también.
 - Queda un acceso directo en el escritorio para abrir el programa cuando
   quieras, en su propia ventana (no en una pestaña del navegador).
+
+SI ALGO SE ROMPE DE VERDAD
+----------------------------
+- "Reparar.bat" (en la carpeta AbarrotesPOS): vuelve a dejar todo en
+  orden — Node.js, MariaDB, dependencias, estructura de la base de
+  datos — SIN borrar tus datos (ventas, inventario, clientes, usuarios
+  y contraseñas quedan igual). Úsalo si el programa dejó de abrir o algo
+  se ve raro.
+- Si además necesitas volver la base de datos a un punto anterior (por
+  ejemplo, si se corrompió de verdad y "Reparar.bat" no alcanza), abre
+  PowerShell como Administrador dentro de la carpeta AbarrotesPOS y
+  ejecuta:
+    powershell -ExecutionPolicy Bypass -File .\scripts\restaurar-respaldo.ps1
+  Te muestra la lista de respaldos guardados y pide confirmación antes
+  de reemplazar los datos actuales — no se hace nunca de forma
+  automática, porque restaurar un respaldo viejo borra las ventas
+  hechas después de esa fecha, y eso lo debe decidir una persona, no el
+  programa solo.
 
 Si quieres conectar este local al panel central (para que el dueño vea
 las ventas de todas las tiendas), entra al programa y ve a

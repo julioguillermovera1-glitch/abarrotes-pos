@@ -100,6 +100,11 @@ if (-not $servicioDB) {
   $rootPassword = Instalar-MariaDBLimpio
 }
 
+# Si el servicio de MariaDB se cae solo (falla de Windows, corte de luz a
+# medio arrancar, etc.), que Windows lo reinicie solo en vez de dejar el
+# programa sin base de datos hasta que alguien lo note.
+sc.exe failure MariaDB reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+
 $mysqlExe = (Get-ChildItem "C:\Program Files\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 if (-not $mysqlExe) {
   $mysqlExe = (Get-ChildItem "C:\Program Files (x86)\MariaDB*\bin\mysql.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
@@ -195,15 +200,31 @@ $configArranque = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnId
 Register-ScheduledTask -TaskName $tareaArranque -Action $accionArranque -Trigger $disparadorArranque -Principal $principal -Settings $configArranque -Description "Inicia Abarrotes POS al iniciar sesión" -Force | Out-Null
 Write-Host "Programado para iniciar solo la próxima vez que se inicie sesión en Windows."
 
-# --- 8. Respaldo automático diario ---
-Write-Host "`n=== 8. Configurando respaldo diario ===" -ForegroundColor Cyan
+# --- 7b. Vigilante: si el programa se cae solo, se reinicia solo ---
+# Revisa cada 5 minutos si el servidor responde; si no, lo reinicia sin
+# avisar ni abrir ninguna ventana. Así una caída del programa (no de
+# Windows) se repara sola aunque no haya nadie mirando la pantalla.
+Write-Host "`n=== 7b. Configurando reinicio automático ante fallas ===" -ForegroundColor Cyan
+$tareaVigilante = "AbarrotesPOS-Vigilante"
+Unregister-ScheduledTask -TaskName $tareaVigilante -Confirm:$false -ErrorAction SilentlyContinue
+$accionVigilante = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\vigilante.ps1`"" -WorkingDirectory $AppDir
+$disparadorVigilante = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
+$configVigilante = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -ExecutionTimeLimit (New-TimeSpan -Minutes 3) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName $tareaVigilante -Action $accionVigilante -Trigger $disparadorVigilante -Principal $principal -Settings $configVigilante -Description "Reinicia Abarrotes POS solo si deja de responder" -Force | Out-Null
+Write-Host "El programa se va a reiniciar solo si deja de responder (revisión cada 5 minutos)."
+
+# --- 8. Respaldo automático (todas las noches y también al prender el PC) ---
+Write-Host "`n=== 8. Configurando respaldo automático ===" -ForegroundColor Cyan
 $tareaBackup = "AbarrotesPOS-BackupDiario"
 Unregister-ScheduledTask -TaskName $tareaBackup -Confirm:$false -ErrorAction SilentlyContinue
 $accionBackup = New-ScheduledTaskAction -Execute $nodeExe -Argument "`"$AppDir\scripts\backup.js`"" -WorkingDirectory $AppDir
-$disparadorBackup = New-ScheduledTaskTrigger -Daily -At 23:30
+$disparadoresBackup = @(
+  (New-ScheduledTaskTrigger -Daily -At 23:30),
+  (New-ScheduledTaskTrigger -AtStartup)
+)
 $configBackup = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd
-Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadorBackup -Settings $configBackup -Description "Respaldo diario de la base de datos de Abarrotes POS" -Force | Out-Null
-Write-Host "Respaldo programado todas las noches a las 23:30."
+Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadoresBackup -Settings $configBackup -Description "Respaldo automático de la base de datos de Abarrotes POS" -Force | Out-Null
+Write-Host "Respaldo programado todas las noches a las 23:30, y también cada vez que se prenda el computador."
 
 # --- 8b. Permitir conexiones desde otros puestos en la misma red local ---
 Write-Host "`n=== 8b. Habilitando acceso desde otros puestos en la red ===" -ForegroundColor Cyan
