@@ -163,9 +163,12 @@ const bcrypt = require("bcryptjs");
 const pool = require("./src/db/pool");
 (async () => {
   const hash = bcrypt.hashSync("admin123", 10);
+  // ON DUPLICATE KEY solo toca "nombre" a proposito: si la cuenta admin ya
+  // existe (se esta reinstalando o actualizando), NO se pisa la contraseña
+  // que ya le hayan puesto — solo se crea con admin123 la primerisima vez.
   await pool.query(
     `INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ('Administrador', 'admin', ?, 'admin')
-     ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)`,
+     ON DUPLICATE KEY UPDATE nombre = VALUES(nombre)`,
     [hash]
   );
   console.log("Usuario admin listo.");
