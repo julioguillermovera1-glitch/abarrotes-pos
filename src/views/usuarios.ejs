@@ -43,10 +43,7 @@
             <td><%= u.activo ? 'Activo' : 'Inactivo' %></td>
             <td class="acciones">
               <button class="btn-mini" onclick="abrirEditar(<%= u.id %>, '<%= u.nombre.replace(/'/g, "\\'") %>', '<%= u.rol %>')">Editar</button>
-              <form method="POST" action="/usuarios/<%= u.id %>/restablecer" style="display:inline" onsubmit="return confirm('¿Generar una contraseña nueva para <%= u.nombre.replace(/'/g, "\\'") %>? La anterior dejará de funcionar.')">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" class="btn-mini">Restablecer contraseña</button>
-              </form>
+              <button class="btn-mini" onclick="abrirRestablecer(<%= u.id %>, '<%= u.nombre.replace(/'/g, "\\'") %>')">Restablecer contraseña</button>
               <form method="POST" action="/usuarios/<%= u.id %>/desactivar" style="display:inline">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini btn-danger"><%= u.activo ? 'Desactivar' : 'Activar' %></button>
@@ -96,9 +93,26 @@
           <option value="cajero">Vendedora/Cajera</option>
           <option value="admin">Administrador</option>
         </select>
-        <p style="font-size:0.82rem; color:#888; margin:0.4rem 0 0">Para cambiar la contraseña, usa el botón "Restablecer contraseña".</p>
+        <label>Nueva contraseña (déjalo en blanco para no cambiarla)</label>
+        <input type="password" name="password" placeholder="Sin cambios" minlength="4">
         <div class="modal-botones">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalEditar').style.display='none'">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal restablecer contraseña -->
+  <div id="modalRestablecer" class="modal">
+    <div class="modal-contenido">
+      <h2>Restablecer contraseña: <span id="restablecerNombre"></span></h2>
+      <form method="POST" id="formRestablecer">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>Contraseña nueva (déjalo en blanco para que se genere una sola)</label>
+        <input type="password" name="password" id="restablecerPassword" placeholder="Automática">
+        <div class="modal-botones">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalRestablecer').style.display='none'">Cancelar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
         </div>
       </form>
@@ -110,7 +124,15 @@
       document.getElementById('formEditar').action = `/usuarios/${id}/editar`;
       document.getElementById('editarNombre').value = nombre;
       document.getElementById('editarRol').value = rol;
+      document.getElementById('formEditar').querySelector('[name=password]').value = '';
       document.getElementById('modalEditar').style.display = 'flex';
+    }
+
+    function abrirRestablecer(id, nombre) {
+      document.getElementById('formRestablecer').action = `/usuarios/${id}/restablecer`;
+      document.getElementById('restablecerNombre').textContent = nombre;
+      document.getElementById('restablecerPassword').value = '';
+      document.getElementById('modalRestablecer').style.display = 'flex';
     }
   </script>
 </body>

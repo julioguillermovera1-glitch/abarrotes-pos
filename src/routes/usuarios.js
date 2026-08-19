@@ -43,19 +43,28 @@ router.post('/usuarios', requireAdmin, async (req, res) => {
 });
 
 router.post('/usuarios/:id/editar', requireAdmin, async (req, res) => {
-  const { nombre, rol } = req.body;
-  await pool.query('UPDATE usuarios SET nombre=?, rol=? WHERE id=?',
-    [nombre, rol === 'admin' ? 'admin' : 'cajero', req.params.id]);
+  const { nombre, rol, password } = req.body;
+  const rolFinal = rol === 'admin' ? 'admin' : 'cajero';
+
+  if (password) {
+    const passwordHash = bcrypt.hashSync(password, 10);
+    await pool.query('UPDATE usuarios SET nombre=?, rol=?, password_hash=? WHERE id=?',
+      [nombre, rolFinal, passwordHash, req.params.id]);
+  } else {
+    await pool.query('UPDATE usuarios SET nombre=?, rol=? WHERE id=?',
+      [nombre, rolFinal, req.params.id]);
+  }
   res.redirect('/usuarios');
 });
 
-// Genera una contraseña nueva y la muestra en pantalla una sola vez, para
-// entregársela a la vendedora (no queda guardada en texto plano en ningún lado).
+// Cambia la contraseña de un usuario. Si se escribe una, se usa esa; si se
+// deja en blanco, se genera una al azar (para cuando no importa cuál sea,
+// solo hace falta destrabar a alguien rápido).
 router.post('/usuarios/:id/restablecer', requireAdmin, async (req, res) => {
   const [[u]] = await pool.query('SELECT nombre, usuario FROM usuarios WHERE id = ?', [req.params.id]);
   if (!u) return render(req, res, { error: 'Usuario no encontrado' });
 
-  const password = generarPasswordSimple();
+  const password = req.body.password || generarPasswordSimple();
   const passwordHash = bcrypt.hashSync(password, 10);
   await pool.query('UPDATE usuarios SET password_hash = ? WHERE id = ?', [passwordHash, req.params.id]);
 
