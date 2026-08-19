@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuración — <%= nombreLocal %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/nav', { active: 'configuracion' }) %>
+
+  <main class="content">
+    <div class="content-header">
+      <h1>Configuración del local</h1>
+    </div>
+
+    <p style="color:#888; font-size:0.9rem; max-width:600px">
+      Este nombre y logo aparecen en la pantalla de inicio de sesión, el menú y el ticket de venta.
+      El programa sirve para cualquier tipo de negocio, no solo un almacén de abarrotes — pon aquí
+      el nombre real de tu local.
+    </p>
+
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+    <% if (exito) { %><div class="alert alert-success"><%= exito %></div><% } %>
+
+    <form method="POST" action="/configuracion" enctype="multipart/form-data" style="max-width:400px">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <label>Nombre del local</label>
+      <input type="text" name="nombre_local" value="<%= config.nombre_local %>" required maxlength="150">
+
+      <label style="margin-top:1rem; display:block">Logo actual</label>
+      <img src="<%= config.logo || '/img/icon.ico' %>" alt="Logo actual" style="width:80px; height:80px; border-radius:14px; margin:0.5rem 0; object-fit:contain; background:#f2f2f2">
+
+      <label>Cambiar logo (opcional)</label>
+      <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon">
+
+      <button type="submit" class="btn btn-primary" style="margin-top:1rem">Guardar</button>
+    </form>
+  </main>
+</body>
+</html>

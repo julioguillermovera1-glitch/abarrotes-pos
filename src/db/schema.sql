@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS recuperacion (
   clave_hash VARCHAR(255) NOT NULL
 );
 
+-- Fila única con los datos del local (nombre y logo) que se muestran en el
+-- login, el menú y el ticket — así el mismo programa sirve para cualquier
+-- tipo de negocio, no solo un almacén de abarrotes.
+CREATE TABLE IF NOT EXISTS configuracion (
+  id INT PRIMARY KEY DEFAULT 1,
+  nombre_local VARCHAR(150) NOT NULL DEFAULT 'Mi Negocio',
+  logo VARCHAR(255) NULL
+);
+INSERT IGNORE INTO configuracion (id) VALUES (1);
+
 CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,

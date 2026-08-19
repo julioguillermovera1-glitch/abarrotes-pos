@@ -16,12 +16,18 @@ FORMA FÁCIL (recomendada) — un solo archivo
    desde GitHub, y si faltan, instala Node.js y MariaDB. Puede tardar
    varios minutos la primera vez.
 
-5. Al final se abre el navegador solo, en la pantalla de inicio de sesión.
+5. Al final se abre el programa solo, en su propia ventana (sin barra de
+   direcciones ni pestañas, no se ve como una página de Chrome), en la
+   pantalla de inicio de sesión.
    Usuario: admin
    Contraseña: admin123
 
 6. IMPORTANTE: cambia esa contraseña apenas entres, en el menú
    "Usuarios" → botón "Restablecer contraseña".
+
+7. El programa no es solo para almacenes de abarrotes: en el menú
+   "Configuración" puedes poner el nombre real de tu local y subir tu
+   propio logo — aparecen en el login, el menú y el ticket de venta.
 
 FORMA ALTERNATIVA — sin depender de GitHub en el momento
 ----------------------------------------------------------
@@ -38,8 +44,8 @@ Después de instalado:
 - Todas las noches a las 23:30 se hace un respaldo automático de la
   base de datos (queda guardado en la carpeta "backups" dentro de la
   carpeta AbarrotesPOS).
-- Queda un acceso directo "Abarrotes POS" en el escritorio para abrir
-  el programa cuando quieras (http://localhost:4001).
+- Queda un acceso directo en el escritorio para abrir el programa cuando
+  quieras, en su propia ventana (no en una pestaña del navegador).
 
 Si quieres conectar este local al panel central (para que el dueño vea
 las ventas de todas las tiendas), entra al programa y ve a

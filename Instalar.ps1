@@ -183,10 +183,12 @@ Pop-Location
 Remove-Item $seedPath -Force
 
 # --- 7. Arranque automático al iniciar sesión ---
+# Arranca el servidor y abre el programa en su propia ventana (sin barra de
+# direcciones ni pestañas), para que se sienta como un programa normal.
 Write-Host "`n=== 7. Configurando arranque automático ===" -ForegroundColor Cyan
 $tareaArranque = "AbarrotesPOS-Servidor"
 Unregister-ScheduledTask -TaskName $tareaArranque -Confirm:$false -ErrorAction SilentlyContinue
-$accionArranque = New-ScheduledTaskAction -Execute $nodeExe -Argument "`"$AppDir\src\server.js`"" -WorkingDirectory $AppDir
+$accionArranque = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`"" -WorkingDirectory $AppDir
 $disparadorArranque = New-ScheduledTaskTrigger -AtLogOn
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $configArranque = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -ExecutionTimeLimit 0
@@ -212,24 +214,24 @@ if (-not (Get-NetFirewallRule -DisplayName $reglaFirewall -ErrorAction SilentlyC
 Write-Host "Puerto 4001 habilitado en el firewall. Otros computadores de la misma red ya pueden conectarse."
 
 # --- 9. Acceso directo en el escritorio ---
-# Un .lnk con una URL como destino no es confiable en Windows (espera un
-# programa/archivo, no una URL) — se usa un .url (acceso directo a internet),
-# que es el formato correcto para esto.
+# Apunta al lanzador (scripts\iniciar-app.ps1), que arranca el servidor si
+# hace falta y abre el programa en su propia ventana — no directo a la URL,
+# para que no se abra como una pestaña más de Chrome.
 Write-Host "`n=== 9. Creando acceso directo ===" -ForegroundColor Cyan
 $escritorio = [Environment]::GetFolderPath("Desktop")
-@"
-[InternetShortcut]
-URL=http://localhost:4001
-IconFile=$AppDir\src\public\img\icon.ico
-IconIndex=0
-"@ | Set-Content -Path (Join-Path $escritorio "Abarrotes POS.url") -Encoding ascii
+$rutaAcceso = Join-Path $escritorio "Abarrotes POS.lnk"
+$shell = New-Object -ComObject WScript.Shell
+$acceso = $shell.CreateShortcut($rutaAcceso)
+$acceso.TargetPath = "powershell.exe"
+$acceso.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`""
+$acceso.WorkingDirectory = $AppDir
+$acceso.IconLocation = "$AppDir\src\public\img\icon.ico"
+$acceso.Save()
 Write-Host "Acceso directo creado en el escritorio."
 
 # --- 10. Arrancar ahora ---
 Write-Host "`n=== 10. Iniciando el programa ===" -ForegroundColor Cyan
-Start-Process $nodeExe -ArgumentList "`"$AppDir\src\server.js`"" -WorkingDirectory $AppDir -WindowStyle Hidden
-Start-Sleep -Seconds 3
-Start-Process "http://localhost:4001"
+powershell.exe -ExecutionPolicy Bypass -File "$AppDir\scripts\iniciar-app.ps1"
 
 Write-Host "`n=== Instalación terminada ===" -ForegroundColor Green
 Write-Host "Usuario: admin"

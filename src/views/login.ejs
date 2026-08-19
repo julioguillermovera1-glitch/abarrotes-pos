@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Iniciar sesión — Abarrotes POS</title>
+  <title>Iniciar sesión — <%= nombreLocal %></title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="login-body">
   <div class="login-card">
-    <img src="/img/icon.ico" alt="Abarrotes POS" style="width:64px; height:64px; border-radius:14px; margin-bottom:0.4rem">
-    <h1>Abarrotes POS</h1>
+    <img src="<%= logoLocal %>" alt="<%= nombreLocal %>" style="width:64px; height:64px; border-radius:14px; margin-bottom:0.4rem">
+    <h1><%= nombreLocal %></h1>
     <p class="subtitle">Iniciar sesión</p>
     <% if (error) { %>
       <div class="alert alert-error"><%= error %></div>

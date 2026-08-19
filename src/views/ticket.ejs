@@ -7,7 +7,7 @@
 </head>
 <body class="ticket-body">
   <div class="ticket">
-    <h2>🛒 Abarrotes POS</h2>
+    <h2><%= nombreLocal %></h2>
     <p>Ticket #<%= venta.id %></p>
     <p><%= new Date(venta.creado_en).toLocaleString('es-CL') %></p>
     <p>Atendió: <%= venta.usuario_nombre || '-' %></p>

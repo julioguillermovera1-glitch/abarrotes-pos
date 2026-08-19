@@ -58,7 +58,19 @@ if (APP_MODE === 'central') {
   const reportesRoutes = require('./routes/reportes');
   const setupRoutes = require('./routes/setup');
   const usuariosRoutes = require('./routes/usuarios');
+  const configuracionRoutes = require('./routes/configuracion');
   const { router: cajaRoutes } = require('./routes/caja');
+  const pool = require('./db/pool');
+
+  // Nombre y logo del local: se muestran en el login, el menú y el ticket,
+  // así el mismo programa sirve para cualquier tipo de negocio.
+  app.use(async (req, res, next) => {
+    const [rows] = await pool.query('SELECT nombre_local, logo FROM configuracion WHERE id = 1');
+    const config = rows[0] || {};
+    res.locals.nombreLocal = config.nombre_local || 'Mi Negocio';
+    res.locals.logoLocal = config.logo || '/img/icon.ico';
+    next();
+  });
 
   app.get('/', (req, res) => res.redirect('/ventas'));
   app.use(authRoutes);
@@ -69,6 +81,7 @@ if (APP_MODE === 'central') {
   app.use(reportesRoutes);
   app.use(setupRoutes);
   app.use(usuariosRoutes);
+  app.use(configuracionRoutes);
   app.use(cajaRoutes);
 
   require('./services/sync').start();

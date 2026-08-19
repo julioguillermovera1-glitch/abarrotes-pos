@@ -35,14 +35,18 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 ; (dependencias que se instalan solas, datos de una instalacion previa, git).
 Source: "..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; \
   Excludes: "node_modules,.git,.claude,backups,uploads,.env,dist,installer,*.log"
-; Acceso directo a la pagina del programa (un .lnk con una URL directa como
-; destino no es confiable en Windows, por eso se usa un .url de verdad).
-Source: "AbarrotesPOS.url"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\AbarrotesPOS.url"
+; Los accesos directos apuntan al lanzador (scripts\iniciar-app.ps1), que
+; arranca el servidor si hace falta y abre el programa en su propia
+; ventana (sin barra de direcciones ni pestañas de Chrome/Edge).
+Name: "{group}\{#MyAppName}"; Filename: "powershell.exe"; \
+  Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\iniciar-app.ps1"""; \
+  WorkingDir: "{app}"; IconFilename: "{app}\src\public\img\icon.ico"
 Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\AbarrotesPOS.url"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "powershell.exe"; \
+  Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\iniciar-app.ps1"""; \
+  WorkingDir: "{app}"; IconFilename: "{app}\src\public\img\icon.ico"
 
 [Run]
 ; Termina de instalar Node.js/MariaDB, crea la base de datos, y deja el
