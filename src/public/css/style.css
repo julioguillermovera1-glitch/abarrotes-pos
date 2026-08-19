@@ -187,8 +187,8 @@ body.pos-body .navbar { flex: none; }
 }
 .modal-contenido { background: white; padding: 1.5rem 2rem; border-radius: 8px; width: 380px; max-height: 90vh; overflow-y: auto; }
 .modal-contenido form { display: flex; flex-direction: column; }
-.modal-contenido label { margin-top: 0.7rem; font-size: 0.9rem; color: #444; }
-.modal-contenido input, .modal-contenido select { padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 0.2rem; }
+.modal-contenido label { margin-top: 0.7rem; font-size: 0.9rem; color: #444; display: block; }
+.modal-contenido input, .modal-contenido select { padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 0.2rem; display: block; width: 100%; box-sizing: border-box; }
 .modal-botones { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
 
 .form-inline { display: flex; align-items: center; gap: 0.6rem; margin: 0.8rem 0; }
