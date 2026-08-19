@@ -204,9 +204,19 @@ body.pos-body .navbar { flex: none; }
 .saldo-pendiente { font-weight: bold; color: #b3261e; }
 
 /* Ticket */
-.ticket-body { display: flex; justify-content: center; padding: 2rem; }
+.ticket-body { display: flex; flex-direction: column; align-items: center; padding: 2rem; }
 .ticket { width: 300px; font-family: 'Courier New', monospace; }
 .ticket-tabla { width: 100%; }
 .ticket-tabla td { padding: 0.2rem 0; font-size: 0.9rem; }
 .ticket-total { font-size: 1.2rem; font-weight: bold; }
 .ticket-gracias { text-align: center; margin-top: 1rem; }
+.ticket-acciones { margin-top: 1.5rem; }
+
+/* Al imprimir (impresora térmica de 80mm o cualquier impresora normal),
+   se oculta el botón y se ajusta el ancho al papel del ticket. */
+@media print {
+  .ticket-acciones { display: none; }
+  .ticket-body { padding: 0; align-items: stretch; }
+  .ticket { width: 100%; }
+  @page { size: 80mm auto; margin: 3mm; }
+}

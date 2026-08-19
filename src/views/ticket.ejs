@@ -32,6 +32,12 @@
     <% } %>
     <hr>
     <p class="ticket-gracias">¡Gracias por su compra!</p>
+    <div class="ticket-acciones">
+      <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
   </div>
+  <script>
+    window.addEventListener('load', () => setTimeout(() => window.print(), 300));
+  </script>
 </body>
 </html>

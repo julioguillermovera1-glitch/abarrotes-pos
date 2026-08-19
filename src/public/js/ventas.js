@@ -288,6 +288,7 @@ document.getElementById('btnCobrar').addEventListener('click', async () => {
     return;
   }
 
+  window.open(`/ventas/${data.venta_id}/ticket`, '_blank');
   volverAlInicio();
 });
 
