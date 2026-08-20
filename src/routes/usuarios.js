@@ -79,4 +79,24 @@ router.post('/usuarios/:id/desactivar', requireAdmin, async (req, res) => {
   res.redirect('/usuarios');
 });
 
+// Borra un usuario de verdad, no solo lo desactiva. Solo funciona si nunca
+// registró ninguna venta: la tabla ventas exige un usuario_id valido (no se
+// puede poner en null), asi que la base de datos misma rechaza el borrado
+// si esa vendedora ya vendio algo -- para esos casos existe "Desactivar",
+// que si conserva el historial.
+router.post('/usuarios/:id/eliminar', requireAdmin, async (req, res) => {
+  if (Number(req.params.id) === req.session.usuario.id) {
+    return render(req, res, { error: 'No puedes eliminar tu propia cuenta' });
+  }
+  try {
+    await pool.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+    res.redirect('/usuarios');
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+      return render(req, res, { error: 'No se puede eliminar: esta persona ya tiene ventas registradas. Usa "Desactivar" para no perder el historial.' });
+    }
+    throw err;
+  }
+});
+
 module.exports = router;

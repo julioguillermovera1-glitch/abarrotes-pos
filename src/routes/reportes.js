@@ -1,17 +1,14 @@
 const express = require('express');
+const ExcelJS = require('exceljs');
 const pool = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/reportes', requireAdmin, async (req, res) => {
-  let { desde, hasta } = req.query;
-  if (!desde || !hasta) {
-    const [[hoy]] = await pool.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoy");
-    desde = desde || hoy.hoy;
-    hasta = hasta || hoy.hoy;
-  }
-
+// Comparten las mismas consultas la pantalla de Reportes y la descarga en
+// Excel, para que lo que se ve en pantalla y lo que se descarga siempre
+// coincidan exactamente (mismo rango de fechas, mismos numeros).
+async function obtenerDatosReporte(desde, hasta) {
   const [[resumen]] = await pool.query(
     `SELECT COUNT(*) AS num_ventas, COALESCE(SUM(total),0) AS total_vendido
      FROM ventas WHERE estado='completada' AND DATE(creado_en) BETWEEN ? AND ?`,
@@ -60,9 +57,7 @@ router.get('/reportes', requireAdmin, async (req, res) => {
     `SELECT nombre, existencia, stock_minimo FROM productos WHERE activo=1 AND existencia <= stock_minimo ORDER BY existencia ASC`
   );
 
-  res.render('reportes', {
-    usuario: req.session.usuario,
-    desde, hasta,
+  return {
     resumen,
     ganancia: ganancia[0].ganancia,
     masVendidos,
@@ -70,7 +65,87 @@ router.get('/reportes', requireAdmin, async (req, res) => {
     creditosPendientes,
     cuentasPorPagar,
     bajoStock
-  });
+  };
+}
+
+async function fechasPorDefecto(desde, hasta) {
+  if (!desde || !hasta) {
+    const [[hoy]] = await pool.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoy");
+    desde = desde || hoy.hoy;
+    hasta = hasta || hoy.hoy;
+  }
+  return { desde, hasta };
+}
+
+router.get('/reportes', requireAdmin, async (req, res) => {
+  const { desde, hasta } = await fechasPorDefecto(req.query.desde, req.query.hasta);
+  const datos = await obtenerDatosReporte(desde, hasta);
+  res.render('reportes', { usuario: req.session.usuario, desde, hasta, ...datos });
+});
+
+// Descarga el mismo reporte que se ve en pantalla, en un archivo Excel con
+// una hoja por sección — asi se puede filtrar/ordenar/graficar en Excel sin
+// tener que copiar los datos a mano desde la pagina.
+router.get('/reportes/excel', requireAdmin, async (req, res) => {
+  const { desde, hasta } = await fechasPorDefecto(req.query.desde, req.query.hasta);
+  const { resumen, ganancia, masVendidos, ventasPorDia, creditosPendientes, cuentasPorPagar, bajoStock } =
+    await obtenerDatosReporte(desde, hasta);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Abarrotes POS';
+  wb.created = new Date();
+
+  const resumenSheet = wb.addWorksheet('Resumen');
+  resumenSheet.columns = [{ header: 'Indicador', key: 'k', width: 28 }, { header: 'Valor', key: 'v', width: 20 }];
+  resumenSheet.addRows([
+    { k: 'Rango', v: `${desde} a ${hasta}` },
+    { k: 'Número de ventas', v: resumen.num_ventas },
+    { k: 'Total vendido', v: Number(resumen.total_vendido) },
+    { k: 'Ganancia estimada', v: Number(ganancia) }
+  ]);
+  resumenSheet.getRow(1).font = { bold: true };
+
+  const ventasSheet = wb.addWorksheet('Ventas por día');
+  ventasSheet.columns = [
+    { header: 'Fecha', key: 'dia', width: 14 },
+    { header: 'N.º de ventas', key: 'num_ventas', width: 14 },
+    { header: 'Total', key: 'total', width: 16 }
+  ];
+  ventasPorDia.forEach(v => ventasSheet.addRow({ dia: v.dia, num_ventas: v.num_ventas, total: Number(v.total) }));
+  ventasSheet.getRow(1).font = { bold: true };
+
+  const productosSheet = wb.addWorksheet('Más vendidos');
+  productosSheet.columns = [
+    { header: 'Producto', key: 'nombre', width: 30 },
+    { header: 'Cantidad vendida', key: 'cantidad_vendida', width: 16 },
+    { header: 'Total', key: 'total', width: 16 }
+  ];
+  masVendidos.forEach(p => productosSheet.addRow({ nombre: p.nombre, cantidad_vendida: Number(p.cantidad_vendida), total: Number(p.total) }));
+  productosSheet.getRow(1).font = { bold: true };
+
+  const creditosSheet = wb.addWorksheet('Créditos pendientes');
+  creditosSheet.columns = [{ header: 'Cliente', key: 'nombre', width: 30 }, { header: 'Saldo pendiente', key: 'saldo', width: 18 }];
+  creditosPendientes.forEach(c => creditosSheet.addRow({ nombre: c.nombre, saldo: Number(c.saldo_pendiente) }));
+  creditosSheet.getRow(1).font = { bold: true };
+
+  const proveedoresSheet = wb.addWorksheet('Cuentas por pagar');
+  proveedoresSheet.columns = [{ header: 'Proveedor', key: 'nombre', width: 30 }, { header: 'Saldo pendiente', key: 'saldo', width: 18 }];
+  cuentasPorPagar.forEach(c => proveedoresSheet.addRow({ nombre: c.nombre, saldo: Number(c.saldo_pendiente) }));
+  proveedoresSheet.getRow(1).font = { bold: true };
+
+  const stockSheet = wb.addWorksheet('Bajo stock');
+  stockSheet.columns = [
+    { header: 'Producto', key: 'nombre', width: 30 },
+    { header: 'Existencia', key: 'existencia', width: 14 },
+    { header: 'Mínimo', key: 'stock_minimo', width: 14 }
+  ];
+  bajoStock.forEach(p => stockSheet.addRow({ nombre: p.nombre, existencia: Number(p.existencia), stock_minimo: Number(p.stock_minimo) }));
+  stockSheet.getRow(1).font = { bold: true };
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="Reporte_${desde}_a_${hasta}.xlsx"`);
+  await wb.xlsx.write(res);
+  res.end();
 });
 
 module.exports = router;

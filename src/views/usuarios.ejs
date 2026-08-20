@@ -48,6 +48,10 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <button type="submit" class="btn-mini btn-danger"><%= u.activo ? 'Desactivar' : 'Activar' %></button>
               </form>
+              <form method="POST" action="/usuarios/<%= u.id %>/eliminar" style="display:inline" onsubmit="return confirm('¿Eliminar a <%= u.nombre.replace(/'/g, "\\'") %> para siempre? Si ya tiene ventas registradas, no se va a poder — usa Desactivar en ese caso.')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn-mini btn-danger">Eliminar</button>
+              </form>
             </td>
           </tr>
         <% }) %>
