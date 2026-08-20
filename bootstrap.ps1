@@ -5,6 +5,17 @@
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host "CREA" -NoNewline -ForegroundColor White
+Write-Host "." -NoNewline -ForegroundColor Red
+Write-Host "TU" -NoNewline -ForegroundColor Red
+Write-Host "." -NoNewline -ForegroundColor Red
+Write-Host "IDEA" -ForegroundColor White
+Write-Host "  AbarrotesPOS - software a medida para tu negocio" -ForegroundColor DarkGray
+Write-Host "  ------------------------------------------------" -ForegroundColor DarkGray
+Write-Host ""
+
 $RepoZip = "https://github.com/julioguillermovera1-glitch/abarrotes-pos/archive/refs/heads/master.zip"
 $Destino = "C:\AbarrotesPOS"
 

@@ -13,6 +13,17 @@
 $ErrorActionPreference = 'Stop'
 $AppDir = $PSScriptRoot
 
+Write-Host ""
+Write-Host "  " -NoNewline
+Write-Host "CREA" -NoNewline -ForegroundColor White
+Write-Host "." -NoNewline -ForegroundColor Red
+Write-Host "TU" -NoNewline -ForegroundColor Red
+Write-Host "." -NoNewline -ForegroundColor Red
+Write-Host "IDEA" -ForegroundColor White
+Write-Host "  AbarrotesPOS - software a medida para tu negocio" -ForegroundColor DarkGray
+Write-Host "  ------------------------------------------------" -ForegroundColor DarkGray
+Write-Host ""
+
 function Requiere-Admin {
   $esAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
   if (-not $esAdmin) {
