@@ -61,6 +61,14 @@
           </div>
           <span class="local-actualizado">Última sincronización: <%= new Date(l.actualizado_en).toLocaleString('es-CL') %></span>
 
+          <% if (l.licencia_aviso === 'vencida') { %>
+            <p class="badge-error" style="display:inline-block; margin-top:0.4rem">🔴 Licencia vencida</p>
+          <% } else if (l.licencia_aviso === 'por_vencer') { %>
+            <p class="badge-error" style="display:inline-block; margin-top:0.4rem; background:#fff3cd; color:#856404">
+              🟡 Licencia vence el <%= new Date(l.licencia_expira_en).toLocaleDateString('es-CL') %>
+            </p>
+          <% } %>
+
           <% if (esSuperAdmin && l.cliente_usuario) { %>
             <p style="margin:0.4rem 0; font-size:0.9rem; color:#555">
               Cliente: <strong><%= l.cliente_nombre_contacto || l.cliente_usuario %></strong>

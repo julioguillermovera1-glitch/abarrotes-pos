@@ -4,11 +4,24 @@ const { obtenerConfig } = require('./syncConfig');
 const INTERVAL_MIN = Number(process.env.SYNC_INTERVAL_MINUTES) || 20;
 let activo = false;
 
+// Mismo criterio de vigencia que src/routes/licencia.js: una licencia
+// activada sigue vigente si no tiene fecha de vencimiento (indefinida) o si
+// esa fecha todavía no pasó.
+async function estadoLicencia() {
+  const [[licencia]] = await pool.query('SELECT activado, expira_en FROM licencia WHERE id = 1');
+  if (!licencia || !licencia.activado) return { estado: 'prueba', expira_en: null };
+  if (!licencia.expira_en) return { estado: 'indefinida', expira_en: null };
+  const vigente = new Date(licencia.expira_en) > new Date();
+  return { estado: vigente ? 'vigente' : 'vencida', expira_en: licencia.expira_en };
+}
+
 async function construirResumen(localId, localNombre) {
   const [[ventasHoy]] = await pool.query(
     `SELECT COUNT(*) AS ventas_hoy_count, COALESCE(SUM(total),0) AS ventas_hoy_total
      FROM ventas WHERE estado='completada' AND DATE(creado_en) = CURDATE()`
   );
+
+  const licencia = await estadoLicencia();
 
   const [topProductos] = await pool.query(
     `SELECT p.nombre, SUM(vd.cantidad) AS cantidad
@@ -39,7 +52,9 @@ async function construirResumen(localId, localNombre) {
     top_productos: topProductos.map(p => ({ nombre: p.nombre, cantidad: Number(p.cantidad) })),
     bajo_stock: bajoStock,
     cuentas_por_pagar_total: cuentasPorPagarTotal,
-    cuentas_por_pagar: cuentasPorPagar.map(c => ({ proveedor: c.proveedor, saldo: Number(c.saldo) }))
+    cuentas_por_pagar: cuentasPorPagar.map(c => ({ proveedor: c.proveedor, saldo: Number(c.saldo) })),
+    licencia_estado: licencia.estado,
+    licencia_expira_en: licencia.expira_en
   };
 }
 

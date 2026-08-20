@@ -12,7 +12,11 @@ CREATE TABLE IF NOT EXISTS local_status (
   top_productos JSON,
   bajo_stock JSON,
   cuentas_por_pagar_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-  cuentas_por_pagar JSON
+  cuentas_por_pagar JSON,
+  -- Estado de la licencia de ese local ('prueba', 'indefinida', 'vigente',
+  -- 'vencida'), para poder avisar y renovar antes de que se bloquee solo.
+  licencia_estado VARCHAR(20) NOT NULL DEFAULT 'prueba',
+  licencia_expira_en TIMESTAMP NULL
 );
 
 -- rol 'super_admin' ve y administra todos los locales de todos los clientes

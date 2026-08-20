@@ -129,6 +129,19 @@ router.post('/api/limpiar-locales', requireCentralLogin, async (req, res) => {
 // para no marcar en falso ante una falla pasajera.
 const MINUTOS_SIN_CONEXION = 45;
 
+// Aviso para poder ofrecer la renovación antes de que el local se bloquee
+// solo, no después.
+const DIAS_AVISO_VENCIMIENTO = 30;
+
+function licenciaAviso(l) {
+  if (l.licencia_estado === 'vencida') return 'vencida';
+  if (l.licencia_estado === 'vigente' && l.licencia_expira_en) {
+    const dias = Math.ceil((new Date(l.licencia_expira_en).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (dias <= DIAS_AVISO_VENCIMIENTO) return 'por_vencer';
+  }
+  return null;
+}
+
 // --- Panel central: resumen de los locales. super_admin ve los de todos
 // los clientes (con su nombre y teléfono, para poder darles soporte); un
 // cliente solo ve los suyos propios. ---
@@ -148,7 +161,8 @@ router.get('/dashboard', requireCentralLogin, async (req, res) => {
     top_productos: safeParse(l.top_productos, []),
     bajo_stock: safeParse(l.bajo_stock, []),
     cuentas_por_pagar: safeParse(l.cuentas_por_pagar, []),
-    conectado: (Date.now() - new Date(l.actualizado_en).getTime()) < MINUTOS_SIN_CONEXION * 60 * 1000
+    conectado: (Date.now() - new Date(l.actualizado_en).getTime()) < MINUTOS_SIN_CONEXION * 60 * 1000,
+    licencia_aviso: licenciaAviso(l)
   }));
 
   const totales = parsed.reduce((acc, l) => {
@@ -312,13 +326,14 @@ router.post('/api/sync', async (req, res) => {
   const {
     ventas_hoy_total, ventas_hoy_count,
     top_productos, bajo_stock,
-    cuentas_por_pagar_total, cuentas_por_pagar
+    cuentas_por_pagar_total, cuentas_por_pagar,
+    licencia_estado, licencia_expira_en
   } = req.body;
 
   await pool.query(
     `INSERT INTO local_status
-       (local_id, local_nombre, cliente_id, ventas_hoy_total, ventas_hoy_count, top_productos, bajo_stock, cuentas_por_pagar_total, cuentas_por_pagar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (local_id, local_nombre, cliente_id, ventas_hoy_total, ventas_hoy_count, top_productos, bajo_stock, cuentas_por_pagar_total, cuentas_por_pagar, licencia_estado, licencia_expira_en)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        local_nombre = VALUES(local_nombre),
        cliente_id = VALUES(cliente_id),
@@ -327,12 +342,15 @@ router.post('/api/sync', async (req, res) => {
        top_productos = VALUES(top_productos),
        bajo_stock = VALUES(bajo_stock),
        cuentas_por_pagar_total = VALUES(cuentas_por_pagar_total),
-       cuentas_por_pagar = VALUES(cuentas_por_pagar)`,
+       cuentas_por_pagar = VALUES(cuentas_por_pagar),
+       licencia_estado = VALUES(licencia_estado),
+       licencia_expira_en = VALUES(licencia_expira_en)`,
     [
       local_id, local_nombre, (cred && cred.cliente_id) || null,
       ventas_hoy_total || 0, ventas_hoy_count || 0,
       JSON.stringify(top_productos || []), JSON.stringify(bajo_stock || []),
-      cuentas_por_pagar_total || 0, JSON.stringify(cuentas_por_pagar || [])
+      cuentas_por_pagar_total || 0, JSON.stringify(cuentas_por_pagar || []),
+      licencia_estado || 'prueba', licencia_expira_en || null
     ]
   );
 
