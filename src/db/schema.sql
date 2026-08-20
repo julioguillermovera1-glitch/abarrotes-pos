@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS recuperacion (
 CREATE TABLE IF NOT EXISTS configuracion (
   id INT PRIMARY KEY DEFAULT 1,
   nombre_local VARCHAR(150) NOT NULL DEFAULT 'Mi Negocio',
-  logo VARCHAR(255) NULL
+  logo VARCHAR(255) NULL,
+  tema VARCHAR(30) NOT NULL DEFAULT 'clasico'
 );
 INSERT IGNORE INTO configuracion (id) VALUES (1);
 

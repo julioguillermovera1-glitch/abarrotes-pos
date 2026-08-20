@@ -68,6 +68,28 @@ async function obtenerDatosReporte(desde, hasta) {
   };
 }
 
+function hexToArgb(hex) {
+  return 'FF' + hex.replace('#', '').toUpperCase();
+}
+
+// Pinta el encabezado de una hoja con el color primario del tema (texto
+// blanco) y el resto de las filas con el color de fondo suave del mismo
+// tema, para que el Excel descargado se vea igual de "vestido" que la
+// pantalla de Reportes.
+function estilizarHoja(sheet, tema) {
+  const rellenoHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(tema.primario) } };
+  const rellenoCuerpo = { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(tema.fondo) } };
+
+  sheet.getRow(1).eachCell(celda => {
+    celda.fill = rellenoHeader;
+    celda.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  });
+
+  for (let i = 2; i <= sheet.rowCount; i++) {
+    sheet.getRow(i).eachCell(celda => { celda.fill = rellenoCuerpo; });
+  }
+}
+
 async function fechasPorDefecto(desde, hasta) {
   if (!desde || !hasta) {
     const [[hoy]] = await pool.query("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoy");
@@ -90,6 +112,7 @@ router.get('/reportes/excel', requireAdmin, async (req, res) => {
   const { desde, hasta } = await fechasPorDefecto(req.query.desde, req.query.hasta);
   const { resumen, ganancia, masVendidos, ventasPorDia, creditosPendientes, cuentasPorPagar, bajoStock } =
     await obtenerDatosReporte(desde, hasta);
+  const tema = res.locals.tema;
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Abarrotes POS';
@@ -103,7 +126,7 @@ router.get('/reportes/excel', requireAdmin, async (req, res) => {
     { k: 'Total vendido', v: Number(resumen.total_vendido) },
     { k: 'Ganancia estimada', v: Number(ganancia) }
   ]);
-  resumenSheet.getRow(1).font = { bold: true };
+  estilizarHoja(resumenSheet, tema);
 
   const ventasSheet = wb.addWorksheet('Ventas por día');
   ventasSheet.columns = [
@@ -112,7 +135,7 @@ router.get('/reportes/excel', requireAdmin, async (req, res) => {
     { header: 'Total', key: 'total', width: 16 }
   ];
   ventasPorDia.forEach(v => ventasSheet.addRow({ dia: v.dia, num_ventas: v.num_ventas, total: Number(v.total) }));
-  ventasSheet.getRow(1).font = { bold: true };
+  estilizarHoja(ventasSheet, tema);
 
   const productosSheet = wb.addWorksheet('Más vendidos');
   productosSheet.columns = [
@@ -121,17 +144,17 @@ router.get('/reportes/excel', requireAdmin, async (req, res) => {
     { header: 'Total', key: 'total', width: 16 }
   ];
   masVendidos.forEach(p => productosSheet.addRow({ nombre: p.nombre, cantidad_vendida: Number(p.cantidad_vendida), total: Number(p.total) }));
-  productosSheet.getRow(1).font = { bold: true };
+  estilizarHoja(productosSheet, tema);
 
   const creditosSheet = wb.addWorksheet('Créditos pendientes');
   creditosSheet.columns = [{ header: 'Cliente', key: 'nombre', width: 30 }, { header: 'Saldo pendiente', key: 'saldo', width: 18 }];
   creditosPendientes.forEach(c => creditosSheet.addRow({ nombre: c.nombre, saldo: Number(c.saldo_pendiente) }));
-  creditosSheet.getRow(1).font = { bold: true };
+  estilizarHoja(creditosSheet, tema);
 
   const proveedoresSheet = wb.addWorksheet('Cuentas por pagar');
   proveedoresSheet.columns = [{ header: 'Proveedor', key: 'nombre', width: 30 }, { header: 'Saldo pendiente', key: 'saldo', width: 18 }];
   cuentasPorPagar.forEach(c => proveedoresSheet.addRow({ nombre: c.nombre, saldo: Number(c.saldo_pendiente) }));
-  proveedoresSheet.getRow(1).font = { bold: true };
+  estilizarHoja(proveedoresSheet, tema);
 
   const stockSheet = wb.addWorksheet('Bajo stock');
   stockSheet.columns = [
@@ -140,7 +163,7 @@ router.get('/reportes/excel', requireAdmin, async (req, res) => {
     { header: 'Mínimo', key: 'stock_minimo', width: 14 }
   ];
   bajoStock.forEach(p => stockSheet.addRow({ nombre: p.nombre, existencia: Number(p.existencia), stock_minimo: Number(p.stock_minimo) }));
-  stockSheet.getRow(1).font = { bold: true };
+  estilizarHoja(stockSheet, tema);
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="Reporte_${desde}_a_${hasta}.xlsx"`);

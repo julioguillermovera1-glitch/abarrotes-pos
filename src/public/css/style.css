@@ -2,7 +2,7 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: #f4f6f8;
+  background: var(--color-fondo, #f4f6f8);
   color: #222;
 }
 
@@ -11,7 +11,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1b3a57;
+  background: var(--color-primario, #1b3a57);
   color: white;
   padding: 0.8rem 1.5rem;
 }
@@ -26,10 +26,10 @@ body {
   padding: 0.5rem 0.7rem;
   border-radius: 4px;
 }
-.navbar-links a.active, .navbar-links a:hover { background: #2c5478; color: white; }
+.navbar-links a.active, .navbar-links a:hover { background: var(--color-primario-claro, #2c5478); color: white; }
 .navbar-user { display: flex; align-items: center; gap: 0.8rem; }
 .navbar-user a { display: flex; align-items: center; color: #cfe0ee; text-decoration: none; padding: 0.5rem 0.7rem; border-radius: 4px; }
-.navbar-user a.active, .navbar-user a:hover { background: #2c5478; color: white; }
+.navbar-user a.active, .navbar-user a:hover { background: var(--color-primario-claro, #2c5478); color: white; }
 .link-button {
   background: none; border: none; color: #cfe0ee; cursor: pointer; text-decoration: underline;
 }
@@ -50,8 +50,8 @@ body {
 .btn {
   border: none; border-radius: 6px; padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.95rem;
 }
-.btn-primary { background: #1b3a57; color: white; }
-.btn-primary:hover { background: #2c5478; }
+.btn-primary { background: var(--color-primario, #1b3a57); color: white; }
+.btn-primary:hover { background: var(--color-primario-claro, #2c5478); }
 .btn-secondary { background: #e0e4e8; color: #333; }
 .btn-block { width: 100%; margin-top: 1.2rem; }
 .btn-mini { padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; }
@@ -77,7 +77,7 @@ body.pos-body .navbar { flex: none; }
   padding: 0.6rem 1.4rem; border: none; border-radius: 8px 8px 0 0;
   background: #e0e4e8; color: #333; font-size: 0.95rem; cursor: pointer;
 }
-.pos-tab.active { background: white; font-weight: 600; color: #1b3a57; }
+.pos-tab.active { background: white; font-weight: 600; color: var(--color-primario, #1b3a57); }
 
 .pos-layout {
   display: flex; flex-direction: column;
@@ -90,11 +90,11 @@ body.pos-body .navbar { flex: none; }
   flex: 1; display: flex; align-items: center; justify-content: center;
 }
 .btn-nueva-venta {
-  background: #1b3a57; color: white; border: none; border-radius: 12px;
+  background: var(--color-primario, #1b3a57); color: white; border: none; border-radius: 12px;
   padding: 2rem 3.5rem; font-size: 1.8rem; font-weight: 600; cursor: pointer;
   box-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
-.btn-nueva-venta:hover { background: #2c5478; }
+.btn-nueva-venta:hover { background: var(--color-primario-claro, #2c5478); }
 
 /* Estado activo: todo apilado en una sola columna, a todo el ancho */
 .pos-venta-activa {
@@ -104,7 +104,7 @@ body.pos-body .navbar { flex: none; }
 /* Barra de escaneo: con los resultados de búsqueda flotando debajo */
 .pos-scan-bar { position: relative; flex: none; }
 .pos-scan-bar input {
-  width: 100%; padding: 0.9rem 1rem; font-size: 1.15rem; border: 2px solid #1b3a57; border-radius: 8px;
+  width: 100%; padding: 0.9rem 1rem; font-size: 1.15rem; border: 2px solid var(--color-primario, #1b3a57); border-radius: 8px;
 }
 .resultados-lista {
   position: absolute; top: 100%; left: 0; right: 0; margin-top: 0.3rem;
@@ -160,7 +160,7 @@ body.pos-body .navbar { flex: none; }
 /* Tablas de datos */
 .tabla-datos { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 .tabla-datos th, .tabla-datos td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-.tabla-datos th { background: #f0f4f8; }
+.tabla-datos th { background: var(--color-tabla-head, #f0f4f8); }
 .fila-alerta { background: #fff8e1; }
 .acciones { display: flex; gap: 0.4rem; }
 

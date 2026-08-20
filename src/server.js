@@ -43,6 +43,13 @@ app.use(session({
   }
 }));
 
+// El formulario de Configuración (nombre/logo/color del local) es el único
+// que sube un archivo, así que necesita parsearse antes del chequeo de CSRF
+// de abajo (ver middleware/subidaLogo.js para el porqué).
+if (APP_MODE !== 'central') {
+  app.use('/configuracion', require('./middleware/subidaLogo').subirLogo);
+}
+
 app.use(emitirToken);
 app.use(verificarToken);
 app.use((req, res, next) => {
@@ -74,14 +81,23 @@ if (APP_MODE === 'central') {
   const { verificarLicencia } = require('./middleware/licencia');
   const { router: cajaRoutes } = require('./routes/caja');
   const pool = require('./db/pool');
+  const { obtenerTema } = require('./utils/temas');
 
-  // Nombre y logo del local: se muestran en el login, el menú y el ticket,
-  // así el mismo programa sirve para cualquier tipo de negocio.
+  // Instalaciones hechas antes de que existiera el selector de color no
+  // tienen esta columna todavía. Se agrega sola al arrancar (no hace nada
+  // si ya existe), para no depender de que alguien corra una migración a
+  // mano en cada local.
+  pool.query("ALTER TABLE configuracion ADD COLUMN IF NOT EXISTS tema VARCHAR(30) NOT NULL DEFAULT 'clasico'")
+    .catch(err => console.error('No se pudo verificar la columna "tema":', err.message));
+
+  // Nombre, logo y color del local: se muestran en el login, el menú y el
+  // ticket, así el mismo programa sirve para cualquier tipo de negocio.
   app.use(async (req, res, next) => {
-    const [rows] = await pool.query('SELECT nombre_local, logo FROM configuracion WHERE id = 1');
+    const [rows] = await pool.query('SELECT nombre_local, logo, tema FROM configuracion WHERE id = 1');
     const config = rows[0] || {};
     res.locals.nombreLocal = config.nombre_local || 'Mi Negocio';
     res.locals.logoLocal = config.logo || '/img/icon.ico';
+    res.locals.tema = obtenerTema(config.tema);
     next();
   });
 
