@@ -19,6 +19,17 @@ if (APP_MODE === 'central') {
   // Render (y proxys similares) terminan el HTTPS antes de llegar a la app;
   // sin esto, la cookie "secure" nunca se marcaría como enviada por HTTPS.
   app.set('trust proxy', 1);
+
+  // El panel central sirve páginas con sesión (login, dashboard) detrás de un
+  // proxy/caché (Render, o el NGINX caching de un hosting compartido). Sin
+  // esto, un proxy puede guardar una respuesta con la cookie de sesión de
+  // OTRA persona y devolvérsela a todos los visitantes siguientes hasta que
+  // alguien limpie el caché a mano — ya pasó una vez. No depender de que
+  // nadie se acuerde de limpiar el caché.
+  app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
 }
 
 app.use(session({
