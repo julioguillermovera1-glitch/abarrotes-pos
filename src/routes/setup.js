@@ -6,7 +6,7 @@ const sync = require('../services/sync');
 const router = express.Router();
 
 // URL del panel central por defecto (se puede sobreescribir en la pantalla si hiciera falta).
-const CENTRAL_URL_DEFAULT = process.env.CENTRAL_URL_DEFAULT || 'https://ventaslocalconcepcion.onrender.com';
+const CENTRAL_URL_DEFAULT = process.env.CENTRAL_URL_DEFAULT || 'https://panel.creotuidea.cl';
 
 router.get('/setup-sync', requireLogin, (req, res) => {
   const config = obtenerConfig();
