@@ -24,7 +24,9 @@ SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=abarrotes-pos-icono.ico
+SetupIconFile=creatuidea.ico
+WizardImageFile=wiz164.png
+WizardSmallImageFile=wiz55.png
 UninstallDisplayIcon={app}\src\public\img\icon.ico
 
 [Languages]

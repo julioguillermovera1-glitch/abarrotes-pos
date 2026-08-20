@@ -228,13 +228,13 @@ Write-Host "El programa se va a reiniciar solo si deja de responder (revisión c
 Write-Host "`n=== 8. Configurando respaldo automático ===" -ForegroundColor Cyan
 $tareaBackup = "AbarrotesPOS-BackupDiario"
 Unregister-ScheduledTask -TaskName $tareaBackup -Confirm:$false -ErrorAction SilentlyContinue
-$accionBackup = New-ScheduledTaskAction -Execute $nodeExe -Argument "`"$AppDir\scripts\backup.js`"" -WorkingDirectory $AppDir
+$accionBackup = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\respaldo.ps1`"" -WorkingDirectory $AppDir
 $disparadoresBackup = @(
   (New-ScheduledTaskTrigger -Daily -At 23:30),
   (New-ScheduledTaskTrigger -AtStartup)
 )
 $configBackup = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd
-Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadoresBackup -Settings $configBackup -Description "Respaldo automático de la base de datos de Abarrotes POS" -Force | Out-Null
+Register-ScheduledTask -TaskName $tareaBackup -Action $accionBackup -Trigger $disparadoresBackup -Principal $principal -Settings $configBackup -Description "Respaldo automático de la base de datos de Abarrotes POS" -Force | Out-Null
 Write-Host "Respaldo programado todas las noches a las 23:30, y también cada vez que se prenda el computador."
 
 # --- 8b. Permitir conexiones desde otros puestos en la misma red local ---
@@ -249,17 +249,27 @@ Write-Host "Puerto 4001 habilitado en el firewall. Otros computadores de la mism
 # Apunta al lanzador (scripts\iniciar-app.ps1), que arranca el servidor si
 # hace falta y abre el programa en su propia ventana — no directo a la URL,
 # para que no se abra como una pestaña más de Chrome.
+# Si ya existe uno en el escritorio compartido (lo crea el instalador .exe
+# cuando se instala con AbarrotesPOS-Instalador.exe), no se crea otro acá —
+# así no quedan dos accesos directos iguales. Cuando este script se corre
+# solo (instalación por bootstrap.ps1, sin pasar por el .exe), ese acceso
+# compartido no existe todavía y sí se crea el de acá abajo.
 Write-Host "`n=== 9. Creando acceso directo ===" -ForegroundColor Cyan
-$escritorio = [Environment]::GetFolderPath("Desktop")
-$rutaAcceso = Join-Path $escritorio "Abarrotes POS.lnk"
-$shell = New-Object -ComObject WScript.Shell
-$acceso = $shell.CreateShortcut($rutaAcceso)
-$acceso.TargetPath = "powershell.exe"
-$acceso.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`""
-$acceso.WorkingDirectory = $AppDir
-$acceso.IconLocation = "$AppDir\src\public\img\icon.ico"
-$acceso.Save()
-Write-Host "Acceso directo creado en el escritorio."
+$escritorioCompartido = Join-Path $env:PUBLIC "Desktop\Abarrotes POS.lnk"
+if (Test-Path $escritorioCompartido) {
+  Write-Host "Ya existe un acceso directo (creado por el instalador). No se crea otro."
+} else {
+  $escritorio = [Environment]::GetFolderPath("Desktop")
+  $rutaAcceso = Join-Path $escritorio "Abarrotes POS.lnk"
+  $shell = New-Object -ComObject WScript.Shell
+  $acceso = $shell.CreateShortcut($rutaAcceso)
+  $acceso.TargetPath = "powershell.exe"
+  $acceso.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`""
+  $acceso.WorkingDirectory = $AppDir
+  $acceso.IconLocation = "$AppDir\src\public\img\icon.ico"
+  $acceso.Save()
+  Write-Host "Acceso directo creado en el escritorio."
+}
 
 # --- 10. Arrancar ahora ---
 Write-Host "`n=== 10. Iniciando el programa ===" -ForegroundColor Cyan
