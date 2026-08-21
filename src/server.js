@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('express-async-errors'); // hace que los errores en rutas async caigan al manejador de errores en vez de tumbar el proceso
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
 const { emitirToken, verificarToken } = require('./middleware/csrf');
 
 const app = express();
@@ -10,6 +11,13 @@ const APP_MODE = process.env.APP_MODE === 'central' ? 'central' : 'local';
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Cabeceras de seguridad estándar (X-Content-Type-Options, X-Frame-Options,
+// HSTS, etc.). La CSP por defecto de helmet se desactiva a propósito: las
+// vistas usan onclick="" y <script> en línea por todos lados, y esa CSP
+// los bloquearía. Ajustarla bien requeriría mover todo ese JS a archivos
+// aparte -- una tarea separada, no algo para colar en un cambio de seguridad.
+app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

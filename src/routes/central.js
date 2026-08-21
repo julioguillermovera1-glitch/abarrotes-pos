@@ -13,6 +13,18 @@ const router = express.Router();
 pool.query("ALTER TABLE codigos_activacion ADD COLUMN IF NOT EXISTS producto VARCHAR(30) NOT NULL DEFAULT 'abarrotes'")
   .catch(err => console.error('No se pudo verificar la columna "producto":', err.message));
 
+// Compara dos claves sin filtrar por cuánto tarda la comparación (un
+// "===" normal corta apenas encuentra la primera letra distinta, lo que en
+// teoría deja adivinar la clave letra por letra midiendo tiempos de
+// respuesta). No aplica si falta alguna de las dos.
+function compararClaves(recibida, esperada) {
+  if (!recibida || !esperada) return false;
+  const a = Buffer.from(String(recibida));
+  const b = Buffer.from(String(esperada));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 // Productos que puede vender este panel, y sus nombres para mostrar.
 const PRODUCTOS = {
   abarrotes: 'AbarrotesPOS',
@@ -343,8 +355,8 @@ router.post('/api/sync', async (req, res) => {
   }
 
   const [[cred]] = await pool.query('SELECT secret, cliente_id FROM local_credentials WHERE local_id = ?', [local_id]);
-  const autorizado = cred ? key === cred.secret : key === process.env.SYNC_SECRET; // respaldo para configuración manual
-  if (!autorizado) {
+  const esperado = cred ? cred.secret : process.env.SYNC_SECRET; // respaldo para configuración manual
+  if (!compararClaves(key, esperado)) {
     return res.status(401).json({ error: 'Clave de sincronización inválida' });
   }
 
