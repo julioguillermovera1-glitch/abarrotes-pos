@@ -17,7 +17,9 @@ function emitirToken(req, res, next) {
 // código de emparejamiento). No tiene sentido pedirles token CSRF.
 // /api/pagos/confirmacion es el webhook que llama Flow servidor-a-servidor
 // cuando un pago cambia de estado -- tampoco trae sesión de navegador.
-const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia', '/api/pagos/confirmacion'];
+// /pago-retorno tampoco: Flow manda ahí el navegador del cliente con un POST
+// propio (sin nuestro token) cuando termina de pagar.
+const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia', '/api/pagos/confirmacion', '/pago-retorno'];
 
 function verificarToken(req, res, next) {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
