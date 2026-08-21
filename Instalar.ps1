@@ -204,7 +204,7 @@ Remove-Item $seedPath -Force
 Write-Host "`n=== 7. Configurando arranque automático ===" -ForegroundColor Cyan
 $tareaArranque = "AbarrotesPOS-Servidor"
 Unregister-ScheduledTask -TaskName $tareaArranque -Confirm:$false -ErrorAction SilentlyContinue
-$accionArranque = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`"" -WorkingDirectory $AppDir
+$accionArranque = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "//B `"$AppDir\scripts\ejecutar-oculto.vbs`" `"$AppDir\scripts\iniciar-app.ps1`"" -WorkingDirectory $AppDir
 $disparadorArranque = New-ScheduledTaskTrigger -AtLogOn
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $configArranque = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -ExecutionTimeLimit 0
@@ -218,7 +218,7 @@ Write-Host "Programado para iniciar solo la próxima vez que se inicie sesión e
 Write-Host "`n=== 7b. Configurando reinicio automático ante fallas ===" -ForegroundColor Cyan
 $tareaVigilante = "AbarrotesPOS-Vigilante"
 Unregister-ScheduledTask -TaskName $tareaVigilante -Confirm:$false -ErrorAction SilentlyContinue
-$accionVigilante = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\vigilante.ps1`"" -WorkingDirectory $AppDir
+$accionVigilante = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "//B `"$AppDir\scripts\ejecutar-oculto.vbs`" `"$AppDir\scripts\vigilante.ps1`"" -WorkingDirectory $AppDir
 $disparadorVigilante = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
 $configVigilante = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -ExecutionTimeLimit (New-TimeSpan -Minutes 3) -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $tareaVigilante -Action $accionVigilante -Trigger $disparadorVigilante -Principal $principal -Settings $configVigilante -Description "Reinicia Abarrotes POS solo si deja de responder" -Force | Out-Null
@@ -228,7 +228,7 @@ Write-Host "El programa se va a reiniciar solo si deja de responder (revisión c
 Write-Host "`n=== 8. Configurando respaldo automático ===" -ForegroundColor Cyan
 $tareaBackup = "AbarrotesPOS-BackupDiario"
 Unregister-ScheduledTask -TaskName $tareaBackup -Confirm:$false -ErrorAction SilentlyContinue
-$accionBackup = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\respaldo.ps1`"" -WorkingDirectory $AppDir
+$accionBackup = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "//B `"$AppDir\scripts\ejecutar-oculto.vbs`" `"$AppDir\scripts\respaldo.ps1`"" -WorkingDirectory $AppDir
 $disparadoresBackup = @(
   (New-ScheduledTaskTrigger -Daily -At 23:30),
   (New-ScheduledTaskTrigger -AtStartup)
@@ -263,8 +263,8 @@ if (Test-Path $escritorioCompartido) {
   $rutaAcceso = Join-Path $escritorio "Abarrotes POS.lnk"
   $shell = New-Object -ComObject WScript.Shell
   $acceso = $shell.CreateShortcut($rutaAcceso)
-  $acceso.TargetPath = "powershell.exe"
-  $acceso.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AppDir\scripts\iniciar-app.ps1`""
+  $acceso.TargetPath = "wscript.exe"
+  $acceso.Arguments = "//B `"$AppDir\scripts\ejecutar-oculto.vbs`" `"$AppDir\scripts\iniciar-app.ps1`""
   $acceso.WorkingDirectory = $AppDir
   $acceso.IconLocation = "$AppDir\src\public\img\icon.ico"
   $acceso.Save()

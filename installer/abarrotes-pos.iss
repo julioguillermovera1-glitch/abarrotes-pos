@@ -44,13 +44,15 @@ Source: "..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createalls
 [Icons]
 ; Los accesos directos apuntan al lanzador (scripts\iniciar-app.ps1), que
 ; arranca el servidor si hace falta y abre el programa en su propia
-; ventana (sin barra de direcciones ni pestañas de Chrome/Edge).
-Name: "{group}\{#MyAppName}"; Filename: "powershell.exe"; \
-  Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\iniciar-app.ps1"""; \
+; ventana (sin barra de direcciones ni pestañas de Chrome/Edge). Se lanza
+; via wscript (ejecutar-oculto.vbs) en vez de "powershell -WindowStyle
+; Hidden" directo: ese metodo igual deja pasar un parpadeo de consola.
+Name: "{group}\{#MyAppName}"; Filename: "wscript.exe"; \
+  Parameters: "//B ""{app}\scripts\ejecutar-oculto.vbs"" ""{app}\scripts\iniciar-app.ps1"""; \
   WorkingDir: "{app}"; IconFilename: "{app}\src\public\img\icon.ico"
 Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "powershell.exe"; \
-  Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\iniciar-app.ps1"""; \
+Name: "{autodesktop}\{#MyAppName}"; Filename: "wscript.exe"; \
+  Parameters: "//B ""{app}\scripts\ejecutar-oculto.vbs"" ""{app}\scripts\iniciar-app.ps1"""; \
   WorkingDir: "{app}"; IconFilename: "{app}\src\public\img\icon.ico"
 
 [Run]
