@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS codigos_activacion (
   code VARCHAR(10) PRIMARY KEY,
   nota VARCHAR(150),
   meses INT NULL,
+  producto VARCHAR(30) NOT NULL DEFAULT 'abarrotes',
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   usado TINYINT(1) NOT NULL DEFAULT 0,
   instalacion_id VARCHAR(32),

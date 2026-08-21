@@ -174,6 +174,7 @@
     async function generarCodigoLicencia() {
       const nota = document.getElementById('notaLicencia').value.trim();
       const duracion = document.getElementById('duracionLicencia').value;
+      const producto = document.getElementById('productoLicencia').value;
       const msg = document.getElementById('mensajeLicencia');
       msg.style.display = 'none';
       document.getElementById('codigoLicenciaResultado').style.display = 'none';
@@ -181,7 +182,7 @@
       const res = await fetch('/api/generar-codigo-licencia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
-        body: JSON.stringify({ nota, duracion })
+        body: JSON.stringify({ nota, duracion, producto })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -270,10 +271,19 @@
         Genera un código de un solo uso para vender el programa a un local cuya prueba gratis
         de 7 días terminó. El local lo valida aquí mismo al activarlo (necesita internet en ese momento).
       </p>
+      <label>Producto</label>
+      <select id="productoLicencia">
+        <option value="abarrotes">AbarrotesPOS</option>
+        <option value="totem">Totem</option>
+        <option value="contafolio">Contafolio</option>
+        <option value="kotiza">Kotiza</option>
+        <option value="redclara">RedClara</option>
+      </select>
       <label>Nota (opcional, para tu propio registro)</label>
       <input type="text" id="notaLicencia" placeholder="Ej: Minimarket El Sol">
       <label>Duración (según lo que haya pagado)</label>
       <select id="duracionLicencia">
+        <option value="mes">1 mes</option>
         <option value="1">1 año</option>
         <option value="5">5 años</option>
         <option value="indefinido">Indefinido</option>

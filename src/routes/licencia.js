@@ -60,7 +60,7 @@ router.post('/licencia/activar', requireLogin, async (req, res) => {
     const respuesta = await fetch(`${CENTRAL_URL_DEFAULT.replace(/\/$/, '')}/api/activar-licencia`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: codigo, instalacion_id: licencia.instalacion_id }),
+      body: JSON.stringify({ code: codigo, instalacion_id: licencia.instalacion_id, producto: 'abarrotes' }),
       signal: AbortSignal.timeout(60 * 1000) // el panel gratis puede tardar en "despertar"
     });
     data = await respuesta.json().catch(() => ({}));

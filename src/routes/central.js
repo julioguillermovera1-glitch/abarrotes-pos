@@ -7,6 +7,21 @@ const pool = require('../db/pool');
 
 const router = express.Router();
 
+// Paneles instalados antes de que existiera "producto" no tienen esta
+// columna todavia. Se agrega sola al arrancar (no hace nada si ya existe),
+// igual que se hizo con "tema" en la app local.
+pool.query("ALTER TABLE codigos_activacion ADD COLUMN IF NOT EXISTS producto VARCHAR(30) NOT NULL DEFAULT 'abarrotes'")
+  .catch(err => console.error('No se pudo verificar la columna "producto":', err.message));
+
+// Productos que puede vender este panel, y sus nombres para mostrar.
+const PRODUCTOS = {
+  abarrotes: 'AbarrotesPOS',
+  totem: 'Totem',
+  contafolio: 'Contafolio',
+  kotiza: 'Kotiza',
+  redclara: 'RedClara'
+};
+
 const limitarLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -221,14 +236,18 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
 // programa una vez que termina la prueba gratis de 7 días. El local lo
 // valida aquí (necesita internet en ese momento), así no se puede generar
 // un código falso sin conocer uno real. Solo tú vendes el producto. ---
-// duracion: '1' (1 año), '5' (5 años), o 'indefinido'.
-const MESES_POR_DURACION = { '1': 12, '5': 60, indefinido: null };
+// duracion: 'mes' (1 mes), '1' (1 año), '5' (5 años), o 'indefinido'.
+const MESES_POR_DURACION = { mes: 1, '1': 12, '5': 60, indefinido: null };
 
 router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) => {
   const nota = (req.body.nota || '').trim() || null;
   const duracion = req.body.duracion || 'indefinido';
+  const producto = req.body.producto || 'abarrotes';
   if (!(duracion in MESES_POR_DURACION)) {
     return res.status(400).json({ error: 'Duración inválida' });
+  }
+  if (!(producto in PRODUCTOS)) {
+    return res.status(400).json({ error: 'Producto inválido' });
   }
   const meses = MESES_POR_DURACION[duracion];
 
@@ -239,7 +258,7 @@ router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) 
     var [existe] = await pool.query('SELECT 1 FROM codigos_activacion WHERE code = ?', [code]);
   } while (existe.length > 0);
 
-  await pool.query('INSERT INTO codigos_activacion (code, nota, meses) VALUES (?, ?, ?)', [code, nota, meses]);
+  await pool.query('INSERT INTO codigos_activacion (code, nota, meses, producto) VALUES (?, ?, ?, ?)', [code, nota, meses, producto]);
   res.json({ codigo: code });
 });
 
@@ -247,6 +266,9 @@ router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) 
 router.post('/api/activar-licencia', limitarActivacion, async (req, res) => {
   const codigo = (req.body.code || '').trim().toUpperCase();
   const instalacionId = (req.body.instalacion_id || '').trim();
+  // Instalaciones viejas de AbarrotesPOS todavia no mandan "producto" -- se
+  // asume ese por defecto para no romperles la activacion al actualizar.
+  const producto = (req.body.producto || 'abarrotes').trim();
   if (!codigo || !instalacionId) {
     return res.status(400).json({ error: 'Falta el código o el ID de instalación' });
   }
@@ -257,6 +279,9 @@ router.post('/api/activar-licencia', limitarActivacion, async (req, res) => {
   }
   if (existente.usado) {
     return res.status(400).json({ error: 'Ese código ya fue usado.' });
+  }
+  if (existente.producto !== producto) {
+    return res.status(400).json({ error: `Ese código es de ${PRODUCTOS[existente.producto] || existente.producto}, no sirve para este programa.` });
   }
 
   await pool.query(
