@@ -27,8 +27,11 @@ pool.query(`
 // Precios de venta online (pago único = licencia indefinida), iguales a los
 // publicados en creotuidea.cl. Solo Totem y AbarrotesPOS por ahora -- para
 // sumar otro producto basta con agregar su fila aquí.
+// TODO temporal: precio de Totem bajado a $1.000 solo para probar el flujo
+// completo de pago con un cargo real chico. Volver a $300.000 apenas se
+// confirme que el webhook y el correo funcionan.
 const PRECIOS = {
-  totem: { nombre: 'Totem', monto: 300000 },
+  totem: { nombre: 'Totem', monto: 1000 },
   abarrotes: { nombre: 'AbarrotesPOS', monto: 500000 }
 };
 
