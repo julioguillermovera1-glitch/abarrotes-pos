@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Sistema de punto de venta para abarrotes",
   "main": "src/server.js",
+  "author": "Julio Vera Concha (CREA·TU·IDEA)",
+  "license": "UNLICENSED",
   "scripts": {
     "start": "node src/server.js"
   },

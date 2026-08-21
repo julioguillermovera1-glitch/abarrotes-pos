@@ -34,6 +34,14 @@ body {
   background: none; border: none; color: #cfe0ee; cursor: pointer; text-decoration: underline;
 }
 
+/* Aviso de autoría, discreto y en todas las pantallas (no molesta al hacer
+   clic en nada de abajo). */
+.footer-marca {
+  position: fixed; bottom: 6px; right: 10px; z-index: 5; pointer-events: none;
+  font-size: 0.72rem; color: #98a1ab; background: rgba(255,255,255,0.85);
+  padding: 2px 8px; border-radius: 4px;
+}
+
 /* Login */
 .login-body { display: flex; align-items: center; justify-content: center; height: 100vh; }
 .login-card {

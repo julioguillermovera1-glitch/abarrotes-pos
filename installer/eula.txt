@@ -1,0 +1,32 @@
+ACUERDO DE LICENCIA DE USO — ABARROTES POS
+
+Copyright (C) 2026 Julio Vera Concha — CREA.TU.IDEA
+Todos los derechos reservados.
+
+Al instalar este programa, aceptas lo siguiente:
+
+1. PROPIEDAD. Abarrotes POS, su código fuente, su interfaz y su
+   documentacion son propiedad exclusiva de Julio Vera Concha y de
+   CREA.TU.IDEA. Esta instalacion NO transfiere la propiedad del software:
+   solo otorga el derecho de uso segun los terminos de la licencia que
+   hayas adquirido.
+
+2. USO PERMITIDO. Puedes instalar y usar este programa unicamente en el
+   local o negocio cubierto por tu licencia. No esta permitido instalarlo
+   en otros locales adicionales, revenderlo, redistribuirlo ni cederlo a
+   terceros sin autorizacion previa y por escrito del titular.
+
+3. PROHIBICIONES. No esta permitido copiar, modificar, descompilar,
+   aplicar ingenieria inversa, ni intentar eludir el sistema de activacion
+   o licenciamiento del programa.
+
+4. SIN GARANTIA. El programa se entrega "tal cual". El titular no se hace
+   responsable por perdidas de datos, interrupciones del servicio, ni
+   perjuicios derivados del uso del programa, mas alla de lo que exija la
+   ley aplicable.
+
+5. VIGENCIA. El derecho de uso depende de que tu licencia se mantenga
+   vigente (periodo de prueba o codigo de activacion). El vencimiento de
+   la licencia no otorga automaticamente ningun derecho adicional.
+
+Si no aceptas estos terminos, cierra este instalador sin continuar.

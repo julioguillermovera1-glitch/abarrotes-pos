@@ -4,8 +4,9 @@
 
 #define MyAppName "Abarrotes POS"
 #define MyAppVersion "1.0"
-#define MyAppPublisher "Abarrotes POS"
+#define MyAppPublisher "CREA.TU.IDEA"
 #define MyAppURL "http://localhost:4001"
+#define MyAppCopyright "Copyright (C) 2026 Julio Vera Concha - CREA.TU.IDEA. Todos los derechos reservados."
 
 [Setup]
 AppId={{6F2B6C6E-6A9D-4C4E-9A8B-2D6E7B7B7A11}
@@ -13,6 +14,8 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
+AppCopyright={#MyAppCopyright}
+LicenseFile=eula.txt
 DefaultDirName=C:\AbarrotesPOS
 DisableDirPage=no
 DefaultGroupName={#MyAppName}
