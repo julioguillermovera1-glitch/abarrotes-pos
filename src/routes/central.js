@@ -249,7 +249,10 @@ router.post('/api/generar-codigo', requireCentralLogin, async (req, res) => {
 // valida aquí (necesita internet en ese momento), así no se puede generar
 // un código falso sin conocer uno real. Solo tú vendes el producto. ---
 // duracion: 'mes' (1 mes), '1' (1 año), '5' (5 años), o 'indefinido'.
-const MESES_POR_DURACION = { mes: 1, '1': 12, '5': 60, indefinido: null };
+// La generación del código en sí vive en services/licencias.js, compartida
+// con el flujo de compra online (routes/pagos.js) para que ambos caminos
+// produzcan códigos con exactamente las mismas reglas.
+const { generarCodigo, MESES_POR_DURACION } = require('../services/licencias');
 
 router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) => {
   const nota = (req.body.nota || '').trim() || null;
@@ -261,16 +264,7 @@ router.post('/api/generar-codigo-licencia', requireSuperAdmin, async (req, res) 
   if (!(producto in PRODUCTOS)) {
     return res.status(400).json({ error: 'Producto inválido' });
   }
-  const meses = MESES_POR_DURACION[duracion];
-
-  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I para evitar confusión
-  let code;
-  do {
-    code = Array.from({ length: 6 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('');
-    var [existe] = await pool.query('SELECT 1 FROM codigos_activacion WHERE code = ?', [code]);
-  } while (existe.length > 0);
-
-  await pool.query('INSERT INTO codigos_activacion (code, nota, meses, producto) VALUES (?, ?, ?, ?)', [code, nota, meses, producto]);
+  const code = await generarCodigo({ producto, duracion, nota });
   res.json({ codigo: code });
 });
 

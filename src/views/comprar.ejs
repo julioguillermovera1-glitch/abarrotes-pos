@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comprar <%= info.nombre %> — CREA·TU·IDEA</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h1><%= info.nombre %></h1>
+    <p class="subtitle">Licencia indefinida — pago único</p>
+    <p style="font-size: 32px; font-weight: 700; margin: 0.6rem 0 1.2rem;">
+      $<%= info.monto.toLocaleString('es-CL') %> <span style="font-size: 16px; color: #888;">CLP</span>
+    </p>
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+    <form method="POST" action="/api/pagos/crear">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="producto" value="<%= producto %>">
+      <label>Tu correo</label>
+      <input type="email" name="email" required autofocus placeholder="tucorreo@ejemplo.cl">
+      <button type="submit" class="btn btn-primary btn-block">Pagar con Flow</button>
+    </form>
+    <p style="margin-top: 1rem; font-size: 13px; color: #888;">
+      Te llegará el código de licencia a este correo apenas se confirme el pago.
+    </p>
+  </div>
+  <div class="footer-marca">© <%= new Date().getFullYear() %> Julio Vera Concha — CREA·TU·IDEA. Todos los derechos reservados.</div>
+</body>
+</html>

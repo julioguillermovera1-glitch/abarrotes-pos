@@ -15,7 +15,9 @@ function emitirToken(req, res, next) {
 // Rutas que reciben peticiones de otros servidores (no de un navegador con
 // sesión), autenticadas por su propio mecanismo (clave de sincronización,
 // código de emparejamiento). No tiene sentido pedirles token CSRF.
-const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia'];
+// /api/pagos/confirmacion es el webhook que llama Flow servidor-a-servidor
+// cuando un pago cambia de estado -- tampoco trae sesión de navegador.
+const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia', '/api/pagos/confirmacion'];
 
 function verificarToken(req, res, next) {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
