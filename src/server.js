@@ -73,9 +73,11 @@ if (APP_MODE === 'central') {
   // No monta el POS (ventas/inventario/etc.) para mantenerse liviano.
   const { router: centralRoutes } = require('./routes/central');
   const { router: pagosRoutes } = require('./routes/pagos');
+  const { router: contactoRoutes } = require('./routes/contacto');
   app.get('/', (req, res) => res.redirect('/dashboard'));
   app.use(centralRoutes);
   app.use(pagosRoutes);
+  app.use(contactoRoutes);
 } else {
   // Modo local: el POS completo, tal como corre en cada local.
   const authRoutes = require('./routes/auth');

@@ -19,7 +19,9 @@ function emitirToken(req, res, next) {
 // cuando un pago cambia de estado -- tampoco trae sesión de navegador.
 // /pago-retorno tampoco: Flow manda ahí el navegador del cliente con un POST
 // propio (sin nuestro token) cuando termina de pagar.
-const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia', '/api/pagos/confirmacion', '/pago-retorno'];
+// /api/contacto recibe el formulario de contacto desde creotuidea.cl (otro
+// dominio, sin sesión compartida con este panel).
+const RUTAS_PUBLICAS = ['/api/sync', '/api/pair', '/api/activar-licencia', '/api/pagos/confirmacion', '/pago-retorno', '/api/contacto'];
 
 function verificarToken(req, res, next) {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();

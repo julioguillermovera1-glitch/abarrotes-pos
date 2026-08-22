@@ -38,4 +38,28 @@ async function enviarCodigoLicencia({ to, nombreProducto, codigo }) {
   });
 }
 
-module.exports = { enviarCodigoLicencia, correoListo: () => !!process.env.SMTP_HOST };
+// Mensajes del formulario de contacto de creotuidea.cl -- van a la bandeja
+// "contactos@creotuidea.cl" (la que se usa para pedidos), con el correo del
+// que escribe como "responder a" para poder contestarle directo.
+async function enviarContacto({ nombre, emailCliente, producto, mensaje }) {
+  const t = obtenerTransportador();
+  if (!t) {
+    throw new Error('El correo todavía no está configurado (faltan las variables SMTP_* en el .env).');
+  }
+  await t.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to: 'contactos@creotuidea.cl',
+    replyTo: emailCliente,
+    subject: `Nuevo contacto de ${nombre}${producto ? ' — ' + producto : ''}`,
+    text: [
+      `Nombre: ${nombre}`,
+      `Correo: ${emailCliente}`,
+      producto ? `Producto de interés: ${producto}` : null,
+      '',
+      'Mensaje:',
+      mensaje
+    ].filter(Boolean).join('\n')
+  });
+}
+
+module.exports = { enviarCodigoLicencia, enviarContacto, correoListo: () => !!process.env.SMTP_HOST };

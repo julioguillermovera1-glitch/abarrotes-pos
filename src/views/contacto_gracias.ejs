@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gracias por escribirnos — CREA·TU·IDEA</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <% if (error) { %>
+      <h1>Algo salió mal</h1>
+      <p class="subtitle"><%= error %></p>
+    <% } else { %>
+      <h1>¡Gracias!</h1>
+      <p class="subtitle">Recibimos tu mensaje. Te respondemos apenas podamos, directo a tu correo.</p>
+    <% } %>
+    <p style="margin-top: 1.2rem;"><a href="https://creotuidea.cl">&larr; Volver a creotuidea.cl</a></p>
+  </div>
+  <div class="footer-marca">© <%= new Date().getFullYear() %> Julio Vera Concha — CREA·TU·IDEA. Todos los derechos reservados.</div>
+</body>
+</html>
