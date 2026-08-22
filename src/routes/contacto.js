@@ -9,6 +9,9 @@ const router = express.Router();
 router.post('/api/contacto', async (req, res) => {
   const nombre = (req.body.nombre || '').trim();
   const emailCliente = (req.body.email || '').trim();
+  const telefono = (req.body.telefono || '').trim();
+  const cargo = (req.body.cargo || '').trim();
+  const rut = (req.body.rut || '').trim();
   const producto = (req.body.producto || '').trim();
   const mensaje = (req.body.mensaje || '').trim();
 
@@ -17,7 +20,7 @@ router.post('/api/contacto', async (req, res) => {
   }
 
   try {
-    await email.enviarContacto({ nombre, emailCliente, producto, mensaje });
+    await email.enviarContacto({ nombre, emailCliente, telefono, cargo, rut, producto, mensaje });
     res.render('contacto_gracias', { error: null });
   } catch (err) {
     console.error('Error enviando mensaje de contacto:', err.message);

@@ -41,7 +41,7 @@ async function enviarCodigoLicencia({ to, nombreProducto, codigo }) {
 // Mensajes del formulario de contacto de creotuidea.cl -- van a la bandeja
 // "contactos@creotuidea.cl" (la que se usa para pedidos), con el correo del
 // que escribe como "responder a" para poder contestarle directo.
-async function enviarContacto({ nombre, emailCliente, producto, mensaje }) {
+async function enviarContacto({ nombre, emailCliente, telefono, cargo, rut, producto, mensaje }) {
   const t = obtenerTransportador();
   if (!t) {
     throw new Error('El correo todavía no está configurado (faltan las variables SMTP_* en el .env).');
@@ -54,6 +54,9 @@ async function enviarContacto({ nombre, emailCliente, producto, mensaje }) {
     text: [
       `Nombre: ${nombre}`,
       `Correo: ${emailCliente}`,
+      telefono ? `Teléfono: ${telefono}` : null,
+      cargo ? `Cargo en la empresa: ${cargo}` : null,
+      rut ? `RUT de la empresa: ${rut}` : null,
       producto ? `Producto de interés: ${producto}` : null,
       '',
       'Mensaje:',
